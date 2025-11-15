@@ -5,7 +5,7 @@ import { db } from "../firebase/firebaseConfig";
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import CalendarCard from "../components/CalendarCard";
 
-// Modal-knapp komponent (gjenbruk fra dashboard)
+// Modal-komponent (uendret)
 function LogModal({ open, onClose, onSubmit }) {
   const [km, setKm] = useState("");
 
@@ -53,6 +53,7 @@ export default function Luker() {
   const [logData, setLogData] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [openedDates, setOpenedDates] = useState({}); // <-- tracker hvilke luker som er snudd
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -91,7 +92,6 @@ export default function Luker() {
       const newLog = { ...logData, [selectedDate]: kmValue };
 
       await updateDoc(userRef, { log: newLog });
-
       setLogData(newLog);
       setModalOpen(false);
     } catch (err) {
@@ -100,17 +100,17 @@ export default function Luker() {
   };
 
   const canOpen = (dateStr) => {
-    if (dateStr === today) return false;
-    if (dateStr < today) return true;
-    return false;
+    if (dateStr === today) return false; // dagens luke åpnes kun på dashboard
+    if (dateStr < today) return true;    // tidligere datoer kan åpnes
+    return false;                         // fremtidige datoer låst
   };
 
-    // Generer datostrenger for 1.–24. desember i år (timezone-safe)
-    const year = new Date().getFullYear();
-    const days = Array.from({ length: 24 }).map((_, i) => {
+  // Desember 1–24 i år
+  const year = new Date().getFullYear();
+  const days = Array.from({ length: 24 }).map((_, i) => {
     const day = (i + 1).toString().padStart(2, "0");
-    return `${year}-11-${day}`;
-    });
+    return `${year}-11-${day}`; // desember
+  });
 
   return (
     <div className="relative min-h-screen px-4 sm:px-8 py-6">
@@ -118,19 +118,25 @@ export default function Luker() {
         Alle luker
       </h2>
 
-      {/* ⭐ Mobilvennlig grid */}
       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 max-w-2xl mx-auto">
         {days.map((dateStr) => {
           const km = dailyKmMap[dateStr];
+          const opened = openedDates[dateStr] || false;
 
           return (
             <div
               key={dateStr}
               onClick={() => {
-                if (!canOpen(dateStr)) return;
-                if (km === undefined) return;
-                setSelectedDate(dateStr);
-                setModalOpen(true);
+                if (!canOpen(dateStr) || km === undefined) return;
+
+                if (!opened) {
+                  // Første klikk: snu luken
+                  setOpenedDates((prev) => ({ ...prev, [dateStr]: true }));
+                } else {
+                  // Andre klikk: åpne modal
+                  setSelectedDate(dateStr);
+                  setModalOpen(true);
+                }
               }}
               className={`cursor-pointer transform transition hover:scale-105 ${
                 canOpen(dateStr) ? "" : "opacity-40 cursor-not-allowed"
@@ -139,8 +145,9 @@ export default function Luker() {
               <CalendarCard
                 date={dateStr}
                 km={km}
-                isOpenable={canOpen(dateStr)}
+                isOpenable={opened}
                 small
+                forceOpen={opened} 
               />
             </div>
           );

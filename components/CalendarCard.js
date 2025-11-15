@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-export default function CalendarCard({ date, km, isOpenable, small }) {
+export default function CalendarCard({ date, km, isOpenable, small, forceOpen }) {
   const [opened, setOpened] = useState(false);
   const [particles, setParticles] = useState([]);
 
-  const handleOpen = () => {
-    if (isOpenable && !opened) {
-      setOpened(true);
+  // Hvis forceOpen endres (f.eks dagens luke), snu luken
+  useEffect(() => {
+    if (forceOpen) setOpened(true);
+  }, [forceOpen]);
 
+  const handleOpen = () => {
+    // Kun trigger partikler og snu på første klikk hvis luken ikke allerede er snudd
+    if (!opened && isOpenable) {
+      setOpened(true);
       const newParticles = Array.from({ length: 25 }).map(() => ({
         x: Math.random() * 100 - 50,
         y: Math.random() * -100 - 20,
@@ -38,7 +43,6 @@ export default function CalendarCard({ date, km, isOpenable, small }) {
         onClick={handleOpen}
         whileTap={{ scale: 0.95 }}
       >
-
         <motion.div
           className="relative w-full h-full"
           animate={{ rotateY: opened ? 180 : 0 }}
@@ -63,11 +67,7 @@ export default function CalendarCard({ date, km, isOpenable, small }) {
               transform: "rotateY(180deg)",
             }}
           >
-            <p
-              className={`font-bold ${
-                small ? "text-base" : "text-4xl"
-              }`}
-            >
+            <p className={`font-bold ${small ? "text-base" : "text-4xl"}`}>
               {km} km
             </p>
           </div>
@@ -79,9 +79,7 @@ export default function CalendarCard({ date, km, isOpenable, small }) {
         {particles.map((p, i) => (
           <motion.div
             key={i}
-            className={`absolute text-green-700 ${
-              small ? "text-xs" : "text-xl"
-            }`}
+            className={`absolute text-green-700 ${small ? "text-xs" : "text-xl"}`}
             style={{ top: "50%", left: "50%" }}
             initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
             animate={{
