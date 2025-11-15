@@ -148,6 +148,8 @@ export default function Luker() {
                 isOpenable={opened}
                 small
                 forceOpen={opened} 
+                showNumericDate={true}
+                showDateOnBack={true}
               />
             </div>
           );

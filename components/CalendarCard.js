@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-export default function CalendarCard({ date, km, isOpenable, small, forceOpen }) {
+export default function CalendarCard({ date, km, isOpenable, small, forceOpen, showNumericDate, showDateOnBack }) {
   const [opened, setOpened] = useState(false);
   const [particles, setParticles] = useState([]);
 
@@ -26,11 +26,13 @@ export default function CalendarCard({ date, km, isOpenable, small, forceOpen })
   };
 
   const dateObj = new Date(date);
+  const day = dateObj.getDate().toString().padStart(2, "0");
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
   const monthNames = [
     "januar","februar","mars","april","mai","juni",
     "juli","august","september","oktober","november","desember"
   ];
-  const dayMonth = `${dateObj.getDate()}. ${monthNames[dateObj.getMonth()]}`;
+  const dayMonth = showNumericDate ? `${day}.${month}` : `${dateObj.getDate()}. ${monthNames[dateObj.getMonth()]}`;
 
   return (
     <div className={`flex justify-center ${small ? "my-1" : "my-4"} relative`}>
@@ -67,6 +69,15 @@ export default function CalendarCard({ date, km, isOpenable, small, forceOpen })
               transform: "rotateY(180deg)",
             }}
           >
+            {showDateOnBack && (
+              <p
+                className={`absolute top-2 left-1/2 transform -translate-x-1/2 text-gray-500 ${
+                  small ? "text-[0.5rem]" : "text-[0.6rem]"
+                }`}
+              >
+                {dayMonth}
+              </p>
+            )}
             <p className={`font-bold ${small ? "text-base" : "text-4xl"}`}>
               {km} km
             </p>
