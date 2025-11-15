@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Mountains+of+Christmas:wght@400;700&display=swap');
+
+:root{
+  --jule-rød: #c81d25;
+  --jule-hvit: #ffffff;
+  --kort-farge: #ffffff;
+  --bg: #fbfbfb;
+}
+
+/* Body */
+html,body,#__next{
+  height:100%;
+}
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(180deg,var(--bg) 0%, #ffffff 100%);
+  color:#111827;
+}
+
+/* Simple card style */
+.card {
+  background: var(--kort-farge);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(17,24,39,0.06);
+  padding: 1rem;
+}
+
+/* Header font for festive titles */
+.fest-title {
+  font-family: 'Mountains of Christmas', cursive;
+}
+
+/* Snow effect (subtle) */
+.snow {
+  position: fixed;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  width:100%;
+  height:100%;
+  background-image:
+    radial-gradient(white 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.06;
+  z-index: 0;
+}
+
+/* Progress bar */
+.progress-bg { background: #e6e6e6; border-radius: 999px; height: 12px; }
+.progress-fill { height: 12px; border-radius: 999px; background: linear-gradient(90deg,var(--jule-rød),#ff6b6b); }
+
+/* Small responsiveness tweaks */
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  position: relative;
+  z-index: 10; /* above snow */
+}
+
+/* Button style */
+.btn {
+  background: var(--jule-rød);
+  color: white;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* Link like button */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+}
