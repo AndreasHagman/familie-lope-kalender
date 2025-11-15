@@ -13,14 +13,19 @@ export default function Layout({ children }) {
 
       <header className="bg-white shadow py-4 sticky top-0 z-20">
         <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center px-4">
-          <h1 className="fest-title text-2xl text-juleRød mb-2 sm:mb-0">Familieløpekalender</h1>
+          <h1 className="fest-title text-3xl text-juleRød mb-2 sm:mb-0">Kvale's Løpekalender</h1>
 
           {user && (
             <div className="overflow-x-auto w-full sm:w-auto">
               <ul className="flex space-x-2 sm:space-x-4 whitespace-nowrap">
                 <li>
                   <Link href="/dashboard" className="btn-ghost py-2 px-4 text-center block">
-                    Dashboard
+                    Dagens
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/luker" className="btn-ghost py-2 px-4 text-center block">
+                    Luker
                   </Link>
                 </li>
                 <li>
