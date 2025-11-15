@@ -2,17 +2,31 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import { dailyKmList } from "../utils/dailyKm";
 
+
 export async function initializeDailyKmList() {
-  const ref = doc(db, "config", "dailyKm");
-  const snap = await getDoc(ref);
+  const originalRef = doc(db, "config", "dailyKm");
+  const remainingRef = doc(db, "config", "dailyKmRemaining");
 
-  // Ikke overskriv hvis den allerede finnes
-  if (snap.exists()) return;
+  // 1. Sjekk originallisten
+  const originalSnap = await getDoc(originalRef);
+  let originalList = originalSnap.data()?.list;
 
-  await setDoc(ref, {
+  if (!originalList || !originalList.length) {
+    await setDoc(originalRef, {
     list: dailyKmList,
     createdAt: new Date().toISOString(),
   });
+    console.log("Originallisten dailyKm opprettet");
+  }
 
-  console.log("Daily KM list saved to Firestore for the first time!");
+  // 2. Sjekk remaining-listen
+  const remainingSnap = await getDoc(remainingRef);
+  let remainingList = remainingSnap.data()?.list;
+
+  if (!remainingList || !remainingList.length) {
+    remainingList = [...dailyKmList]; // kopi av original
+    await setDoc(remainingRef, { list: remainingList });
+    console.log("Remaining-listen dailyKmRemaining opprettet");
+  }
 }
+

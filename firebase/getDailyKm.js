@@ -1,59 +1,47 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
-/**
- * Henter eller trekker dagens km
- */
 export async function getKmForToday() {
   const today = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
 
   const selectedRef = doc(db, "config", "dailyKmSelected");
-  const dailyListRef = doc(db, "config", "dailyKm");
+  const remainingRef = doc(db, "config", "dailyKmRemaining");
+  const originalRef = doc(db, "config", "dailyKm"); // original full liste
 
-  // 1. Hent alle allerede trukne tall
+  // 1. Sjekk om dagens km allerede er trukket
   const selectedSnap = await getDoc(selectedRef);
-
-  if (selectedSnap.exists() && selectedSnap.data()[today]) {
-    // Tallet er allerede trukket → returner det
+  if (selectedSnap.exists() && selectedSnap.data()[today] !== undefined) {
     return selectedSnap.data()[today];
   }
 
-  // 2. Hent original listen
-  const listSnap = await getDoc(dailyListRef);
-  console.log("daily list snap:", listSnap.exists(), listSnap.data());
-  const list = listSnap.data()?.list;
-if (!list) {
-  console.error("Error: dailyKm list not found!");
-  return 3; // fallback
+  // 2. Hent listen over resterende tall
+let remainingSnap = await getDoc(remainingRef);
+let remaining = remainingSnap.exists() ? [...remainingSnap.data().list] : [];
+
+// Hvis listen ikke finnes eller tom, lag basert på originallisten
+if (!remaining || remaining.length === 0) {
+  const originalSnap = await getDoc(originalRef);
+  remaining = [...(originalSnap.data()?.list || [])];
 }
 
-  // 3. Finn dagens ukedag
-  const weekday = new Date(today).getDay(); 
-  // søndag=0, mandag=1, tirsdag=2...
+// 3. Finn dagens tall
+let kmForToday;
+if (weekday === 0) kmForToday = 0;
+else if (weekday === 1) kmForToday = 7;
+else {
+  const index = Math.floor(Math.random() * remaining.length);
+  kmForToday = remaining[index];
+}
 
-  let kmForToday;
+// 4. Fjern **bare én forekomst** av dagens tall fra remaining
+const removeIndex = remaining.indexOf(kmForToday);
+if (removeIndex !== -1) remaining.splice(removeIndex, 1);
 
-  // --- REGLER ---
-  if (weekday === 0) {
-    kmForToday = 0;  // Søndag
-  } else if (weekday === 1) {
-    kmForToday = 7;  // Mandag
-  } else {
-    // Vanlig dag → trekk tilfeldig fra restlisten
+// 5. Lagre dagens trekk
+await setDoc(selectedRef, { [today]: kmForToday }, { merge: true });
 
-    // Fjern reserverte tall (4x7 og 4x0)
-    const reserved = [7,7,7,7,0,0,0,0];
-    const available = list.filter(v => !reserved.includes(v));
-
-    kmForToday = available[Math.floor(Math.random() * available.length)];
-  }
-
-  // 4. Lagre dagens trekk slik at alle brukere får samme
-  await setDoc(
-    selectedRef,
-    { [today]: kmForToday },
-    { merge: true }
-  );
+// 6. Oppdater remaining-listen
+await setDoc(remainingRef, { list: remaining }, { merge: true });
 
   return kmForToday;
 }
