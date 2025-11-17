@@ -38,7 +38,7 @@ async function getKmForToday() {
 }
 
 // ✅ Modal-knapp komponent
-function LogKmButton({ onSubmit }) {
+function LogKmButton({ onSubmit, existingLogForToday }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [kmLogged, setKmLogged] = useState("");
 
@@ -74,6 +74,19 @@ function LogKmButton({ onSubmit }) {
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
+              {/* 🔥 VIS EKSISTERENDE LOGG FOR DAGENS DATO */}
+        <div className="mb-4 text-center">
+          {existingLogForToday !== undefined ? (
+            <p className="text-sm text-gray-700">
+              Du har allerede registrert:  
+              <span className="font-bold text-juleRød"> {existingLogForToday} km</span>
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Ingen data registrert for i dag.
+            </p>
+          )}
+        </div>
             <h2 className="text-xl font-bold mb-4 text-center">Logg løpeturen</h2>
             <input
               type="number"
@@ -112,6 +125,7 @@ export default function Dashboard() {
   const [logData, setLogData] = useState({});
   const [dailyKm, setDailyKm] = useState(null);
   const [today] = useState(new Date().toISOString().slice(0, 10));
+  const [existingLogForToday, setExistingLogForToday] = useState(undefined);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -132,6 +146,7 @@ export default function Dashboard() {
 
           const snap = await getDoc(docRef);
           setLogData(snap.data().log || {});
+          setExistingLogForToday(snap.data().log?.[today]);
 
           const km = await getKmForToday();
           setDailyKm(km);
@@ -170,7 +185,7 @@ export default function Dashboard() {
   const snowballs = Array.from({ length: 50 });
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-blue-50 to-white overflow-hidden px-4 sm:px-8 py-6">
+    <div className="relative h-full bg-gradient-to-b from-blue-50 to-white overflow-hidden px-4 sm:px-8 py-6 no-scroll">
       {snowballs.map((_, i) => (
         <motion.div
           key={i}
@@ -201,18 +216,10 @@ export default function Dashboard() {
           <CalendarCard date={today} km={dailyKm} isOpenable={true} />
         )}
 
-        <LogKmButton onSubmit={handleSubmit} />
-      </div>
-
-      <div className="mt-8 relative z-10">
-        <h3 className="text-xl font-semibold mb-2">Din fremdrift</h3>
-        <ul className="space-y-1">
-          {Object.entries(logData).map(([date, val]) => (
-            <li key={date} className="text-base">
-              {date}: {val} km
-            </li>
-          ))}
-        </ul>
+        <LogKmButton 
+        onSubmit={handleSubmit} 
+        existingLogForToday={existingLogForToday}
+      />
       </div>
     </div>
   );

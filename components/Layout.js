@@ -7,29 +7,40 @@ export default function Layout({ children }) {
   const { user } = useAuth();
 
   return (
-    <div className="relative min-h-screen bg-gray-50">
+    <div className="relative flex flex-col min-h-screen bg-gray-50">
       {/* Snøeffekt */}
       <div className="snow"></div>
 
-      <header className="bg-white shadow py-4 sticky top-0 z-20">
+      <header className="bg-white shadow py-4 sticky top-0 z-20 flex-shrink-0">
         <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center px-4">
-          <h1 className="fest-title text-3xl text-juleRød mb-2 sm:mb-0">Kvale's Løpekalender</h1>
+          <h1 className="fest-title text-3xl text-juleRød mb-2 sm:mb-0">
+            Kvale's Løpekalender
+          </h1>
 
           {user && (
             <div className="overflow-x-auto w-full sm:w-auto">
               <ul className="flex space-x-2 sm:space-x-4 whitespace-nowrap">
                 <li>
-                  <Link href="/dashboard" className="btn-ghost py-2 px-4 text-center block">
+                  <Link
+                    href="/dashboard"
+                    className="btn-ghost py-2 px-4 text-center block"
+                  >
                     Dagens
                   </Link>
                 </li>
                 <li>
-                  <Link href="/luker" className="btn-ghost py-2 px-4 text-center block">
+                  <Link
+                    href="/luker"
+                    className="btn-ghost py-2 px-4 text-center block"
+                  >
                     Luker
                   </Link>
                 </li>
                 <li>
-                  <Link href="/familie" className="btn-ghost py-2 px-4 text-center block">
+                  <Link
+                    href="/familie"
+                    className="btn-ghost py-2 px-4 text-center block"
+                  >
                     Familien
                   </Link>
                 </li>
@@ -47,7 +58,8 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 mt-6 z-10 relative">
+      {/* Main content fyller resten av høyden */}
+      <main className="flex-1 overflow-hidden container mx-auto px-4 z-10 relative">
         {children}
       </main>
     </div>
