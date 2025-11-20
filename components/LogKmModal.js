@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchTodaysStravaActivities } from "../utils/strava";
+import { fetchTodaysStravaActivities } from "../utils/stravaClient";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 

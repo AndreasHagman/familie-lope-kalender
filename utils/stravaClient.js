@@ -3,8 +3,8 @@
  * og filtrer på et nøkkelord i navn eller beskrivelse.
  */
 export async function fetchTodaysStravaActivities(accessToken, keyWord) {
-  //const todayDate = new Date().toISOString().slice(0, 10);
-  const todayDate = new Date("2025-11-17T00:00:00Z").toISOString().slice(0, 10);
+  const todayDate = new Date().toISOString().slice(0, 10);
+  //const todayDate = new Date("2025-11-17T00:00:00Z").toISOString().slice(0, 10);
 
   try {
     const res = await fetch(

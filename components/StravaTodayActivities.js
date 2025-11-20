@@ -13,8 +13,8 @@ export default function StravaTodayActivities({ accessToken }) {
       setError("");
 
       try {
-        //const today = new Date();
-        const today = new Date("2025-11-17T00:00:00Z");
+        const today = new Date();
+        //const today = new Date("2025-11-17T00:00:00Z");
         today.setHours(0, 0, 0, 0);
         const after = Math.floor(today.getTime() / 1000);
 
