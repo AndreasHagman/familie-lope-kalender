@@ -16,7 +16,7 @@ export default function Layout({ children }) {
     { href: "/dashboard", label: "Dagens" },
     { href: "/luker", label: "Luker" },
     { href: "/familie", label: "Familien" },
-    { href: "/strava", label: "Strava" },
+    { href: "/stravaProfil", label: "Strava" },
   ];
 
   return (
