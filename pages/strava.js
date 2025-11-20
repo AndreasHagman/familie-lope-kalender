@@ -3,6 +3,8 @@ import { auth, db } from "../firebase/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import StravaKeyword from "../components/StravaKeyword";
+import StravaTodayActivities from "../components/StravaTodayActivities";
+import { fetchStravaAthlete } from "../utils/stravaClient";
 
 export default function StravaProfile() {
   const [user, setUser] = useState(null);
@@ -38,7 +40,8 @@ export default function StravaProfile() {
 
         // Hvis access token finnes → hent athlete-info
         if (data.access_token) {
-          fetchAthlete(data.access_token);
+          const athleteData = await fetchStravaAthlete(data.access_token);
+          setAthlete(athleteData);
         }
       }
 
@@ -47,24 +50,6 @@ export default function StravaProfile() {
 
     return () => unsubscribe();
   }, []);
-
-  // ------------------------------
-  // 2. Hent Strava athlete-info
-  // ------------------------------
-  async function fetchAthlete(accessToken) {
-    try {
-      const res = await fetch("https://www.strava.com/api/v3/athlete", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
-      setAthlete(data);
-    } catch (error) {
-      console.error("Feil ved henting av athlete:", error);
-    }
-  }
 
   // ------------------------------
   // 3. Koble fra Strava
@@ -147,6 +132,9 @@ export default function StravaProfile() {
           </button>
           {/* ---------------- Keyword component ---------------- */}
           <StravaKeyword />
+
+           {/* ⭐ NYTT KOMPONENT: viser dagens Strava-aktiviteter */}
+            <StravaTodayActivities accessToken={strava.access_token} />
         </div>
       )}
     </div>

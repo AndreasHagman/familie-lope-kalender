@@ -4,11 +4,6 @@ import { fetchTodaysStravaActivities } from "../utils/strava";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 
-const switchToManual = () => {
-  setManualMode(true);
-  setStravaKm(null);
-};
-
 export default function LogKmModal({
   open,
   onClose,
@@ -22,6 +17,11 @@ export default function LogKmModal({
   const [loadingStrava, setLoadingStrava] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [keyWord, setKeyWord] = useState("luke"); // fallback
+
+  const switchToManual = () => {
+  setManualMode(true);
+  setStravaKm(null);
+};
 
  // 🔥 Hent keyword fra bruker-dokument
   useEffect(() => {
@@ -48,7 +48,6 @@ export default function LogKmModal({
           if (Number(km) > 0) {
             setStravaKm(km);
           } else {
-            setManualMode(true); // Ingen aktiviteter → manual mode
             setStravaKm(null);
           }
         })
@@ -102,34 +101,34 @@ export default function LogKmModal({
             <h2 className="text-xl font-bold mb-4 text-center">Logg løpeturen</h2>
 
             {/* Strava feedback */}
-            {stravaAccessToken && !manualMode && (
+            {stravaAccessToken && (
             <div className="mb-4 text-center">
                 {loadingStrava ? (
                 <p className="text-gray-500">Henter Strava-data…</p>
                 ) : stravaKm !== null ? (
-                <>
-                    <p className="text-green-700 font-semibold">
+                <p className="text-green-700 font-semibold">
                     🏃‍♂️ Strava-aktivitet funnet: <span className="font-bold">{stravaKm} km</span>
-                    </p>
-
-                    {/* ⭐ Ny manuell override knapp */}
-                    <button
-                    onClick={switchToManual}
-                    className="mt-2 text-sm text-blue-600 underline hover:text-blue-800"
-                    >
-                    Logg manuelt i stedet
-                    </button>
-                </>
+                </p>
                 ) : (
                 <p className="text-sm text-gray-500">
                     Ingen Strava-aktiviteter funnet for i dag med nøkkelordet "{keyWord}".
                 </p>
                 )}
+
+                {/* Alltid vis knapp for manuell logging */}
+                {(!manualMode) && (
+                <button
+                onClick={() => setManualMode(true)}
+                className="mt-2 text-sm text-blue-600 underline hover:text-blue-800"
+                >
+                Logg manuelt i stedet
+                </button>
+                )}
             </div>
             )}
 
             {/* Manuell input */}
-            {(manualMode || !stravaAccessToken) && (
+            {(manualMode) && (
             <input
                 type="number"
                 min="0"
