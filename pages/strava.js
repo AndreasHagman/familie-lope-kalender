@@ -128,7 +128,7 @@ export default function StravaProfile() {
                   {athlete.firstname} {athlete.lastname}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Athlete ID: {strava.athleteId}
+                  Athlete ID: {athlete.id}
                 </p>
               </div>
             </div>
