@@ -17,6 +17,15 @@ html, body, #__next {
   overflow-x: hidden;
 }
 
+@keyframes fade-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background: linear-gradient(180deg, var(--bg) 0%, #ffffff 100%);

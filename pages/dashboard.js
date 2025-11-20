@@ -4,29 +4,27 @@ import { useEffect, useState } from "react";
 import CalendarCard from "../components/CalendarCard";
 import { db } from "../firebase/firebaseConfig";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import LogKmModal from "../components/LogKmModal";
 
 // 🔥 Hent/trrekk dagens km fra Firestore
 async function getKmForToday() {
-  const today = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
+  const today = new Date().toISOString().slice(0, 10); 
   const selectedRef = doc(db, "config", "dailyKmSelected");
   const dailyListRef = doc(db, "config", "dailyKm");
 
-  // Hent allerede trukne tall
   const selectedSnap = await getDoc(selectedRef);
   if (selectedSnap.exists() && selectedSnap.data()[today] !== undefined) {
-    return selectedSnap.data()[today]; // Allerede trukket
+    return selectedSnap.data()[today];
   }
 
-  // Hent hele originallisten
   const listSnap = await getDoc(dailyListRef);
   const list = listSnap.data()?.list || [];
 
-  const weekday = new Date(today).getDay(); // 0=søndag, 1=mandag ...
+  const weekday = new Date(today).getDay();
   let kmForToday;
-
-  if (weekday === 0) kmForToday = 0;       // Søndag
-  else if (weekday === 1) kmForToday = 7;  // Mandag
+  if (weekday === 0) kmForToday = 0;     
+  else if (weekday === 1) kmForToday = 7; 
   else {
     const reserved = [7,7,7,7,0,0,0,0];
     const available = list.filter(v => !reserved.includes(v));
@@ -37,18 +35,9 @@ async function getKmForToday() {
   return kmForToday;
 }
 
-// ✅ Modal-knapp komponent
-function LogKmButton({ onSubmit, existingLogForToday }) {
+// ✅ Modal button component med Strava
+function LogKmButton({ onSubmit, existingLogForToday, stravaAccessToken, user }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [kmLogged, setKmLogged] = useState("");
-
-  const handleSubmit = () => {
-    const kmValue = Number(kmLogged);
-    if (isNaN(kmValue)) return;
-    onSubmit(kmValue);
-    setKmLogged("");
-    setModalOpen(false);
-  };
 
   return (
     <>
@@ -59,61 +48,14 @@ function LogKmButton({ onSubmit, existingLogForToday }) {
         Logg løpeturen
       </button>
 
-<AnimatePresence>
-      {modalOpen && (
-       <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-white rounded-lg p-6 w-80 max-w-full"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              {/* 🔥 VIS EKSISTERENDE LOGG FOR DAGENS DATO */}
-        <div className="mb-4 text-center">
-          {existingLogForToday !== undefined ? (
-            <p className="text-sm text-gray-700">
-              Du har allerede registrert:  
-              <span className="font-bold text-juleRød"> {existingLogForToday} km</span>
-            </p>
-          ) : (
-            <p className="text-sm text-gray-500">
-              Ingen data registrert for i dag.
-            </p>
-          )}
-        </div>
-            <h2 className="text-xl font-bold mb-4 text-center">Logg løpeturen</h2>
-            <input
-              type="number"
-              min="0"
-              value={kmLogged}
-              onChange={(e) => setKmLogged(e.target.value)}
-              placeholder="Antall km"
-              className="border rounded px-3 py-2 w-full text-center mb-4"
-            />
-            <div className="flex justify-between">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="px-4 py-2 rounded border hover:bg-gray-100"
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="bg-juleRød text-white px-4 py-2 rounded hover:bg-red-700"
-              >
-                Logg km
-              </button>
-            </div>
-          </motion.div>
-          </motion.div>
-      )}
-      </AnimatePresence>
+      <LogKmModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={onSubmit}
+        existingLogForToday={existingLogForToday}
+        stravaAccessToken={stravaAccessToken}
+        user={user}
+      />
     </>
   );
 }
@@ -126,6 +68,7 @@ export default function Dashboard() {
   const [dailyKm, setDailyKm] = useState(null);
   const [today] = useState(new Date().toISOString().slice(0, 10));
   const [existingLogForToday, setExistingLogForToday] = useState(undefined);
+  const [stravaAccessToken, setStravaAccessToken] = useState(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -145,12 +88,17 @@ export default function Dashboard() {
           }
 
           const snap = await getDoc(docRef);
-          setLogData(snap.data().log || {});
-          setExistingLogForToday(snap.data().log?.[today]);
+          const data = snap.data();
+          setLogData(data.log || {});
+          setExistingLogForToday(data.log?.[today]);
+          
+          // 🔹 Hent Strava access token
+          if (data.strava?.access_token) {
+            setStravaAccessToken(data.strava.access_token);
+          }
 
           const km = await getKmForToday();
           setDailyKm(km);
-
         } catch (err) {
           console.error("Feil ved init:", err);
         }
@@ -175,7 +123,7 @@ export default function Dashboard() {
       }
 
       setLogData(newLog);
-      router.push("/familie"); // Send bruker til Familie-fanen etter logging
+      router.push("/familie");
     } catch (err) {
       console.error(err);
     }
@@ -190,18 +138,9 @@ export default function Dashboard() {
         <motion.div
           key={i}
           className="absolute w-2 h-2 bg-white rounded-full"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * -100}%`,
-          }}
+          style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * -100}%` }}
           animate={{ y: ["-10vh", "110vh"] }}
-          transition={{
-            repeat: Infinity,
-            repeatType: "loop",
-            duration: 3 + Math.random() * 5,
-            delay: Math.random() * 5,
-            ease: "linear",
-          }}
+          transition={{ repeat: Infinity, repeatType: "loop", duration: 3 + Math.random() * 5, delay: Math.random() * 5, ease: "linear" }}
         />
       ))}
 
@@ -216,10 +155,12 @@ export default function Dashboard() {
           <CalendarCard date={today} km={dailyKm} isOpenable={true} />
         )}
 
-        <LogKmButton 
-        onSubmit={handleSubmit} 
-        existingLogForToday={existingLogForToday}
-      />
+        <LogKmButton
+          onSubmit={handleSubmit}
+          existingLogForToday={existingLogForToday}
+          stravaAccessToken={stravaAccessToken}
+          user={user}
+        />
       </div>
     </div>
   );

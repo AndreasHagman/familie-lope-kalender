@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { auth, db } from "../firebase/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import StravaKeyword from "../components/StravaKeyword";
 
 export default function StravaProfile() {
   const [user, setUser] = useState(null);
@@ -144,6 +145,8 @@ export default function StravaProfile() {
           >
             ❌ Koble fra Strava
           </button>
+          {/* ---------------- Keyword component ---------------- */}
+          <StravaKeyword />
         </div>
       )}
     </div>
