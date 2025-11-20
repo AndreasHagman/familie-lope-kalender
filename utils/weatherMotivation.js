@@ -1,27 +1,14 @@
-export function getWeatherMotivation(weather) {
-  const temp = weather.current.temp;
-  const rain = weather.minutely?.some((m) => m.precipitation > 0);
-  const wind = weather.current.wind_speed;
+export function getWeatherMotivation(data) {
+  const temp = data.main.temp;
+  const wind = data.wind.speed;
+  const weatherId = data.weather[0].id; // ex: 800 = klar himmel
+  const isRain = weatherId >= 500 && weatherId < 600;
 
-  if (rain) {
-    return "🌧 Det ser ut til å bli regn i dag – kanskje løp nå før det starter?";
-  }
+  if (isRain) return "🌧 Litt regn i dag – vurder en tidligere økt!";
+  if (temp > 20) return "☀️ Perfekt løpevær i dag!";
+  if (temp > 10) return "😄 Flott løpevær.";
+  if (temp > 0) return "❄️ Litt kaldt, men helt fint med riktige klær.";
+  if (wind > 10) return "💨 Mye vind – finn et mer skjermet område.";
 
-  if (temp > 20) {
-    return "☀️ Herlig varmt! Perfekt dag for en løpetur.";
-  }
-
-  if (temp > 10) {
-    return "😊 Fint løpevær. Nyt turen!";
-  }
-
-  if (temp > 0) {
-    return "❄️ Litt kaldt, men legg inn en rolig økt med gode klær!";
-  }
-
-  if (wind > 10) {
-    return "💨 Mye vind i dag – prøv å løpe i skog eller mer skjermede steder!";
-  }
-
-  return "🏃‍♂️ Et greit utgangspunkt – bare kom deg ut og nyt turen!";
+  return "🏃 Kom deg ut og nyt dagens løpetur!";
 }
