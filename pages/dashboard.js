@@ -150,7 +150,6 @@ export default function Dashboard() {
       </h2>
 
       <div className="relative z-10 flex flex-col items-center">
-        <WeatherMotivator />   {/* 👈 Legg inn her */}
         {dailyKm === null ? (
           <p className="text-center text-lg">Henter dagens luke...</p>
         ) : (
@@ -163,6 +162,7 @@ export default function Dashboard() {
           stravaAccessToken={stravaAccessToken}
           user={user}
         />
+        <WeatherMotivator />   {/* 👈 Legg inn her */}
       </div>
     </div>
   );

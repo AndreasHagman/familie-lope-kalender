@@ -40,26 +40,19 @@ export default function WeatherMotivator() {
         setLoading(false);
       },
       (err) => {
+        setMotivation(null);
         console.error("Geo error:", err);
-        setMotivation("❗ Kunne ikke hente posisjon.");
-        setDebug(`Geo-feil: ${err.message}`);
         setLoading(false);
       }
     );
   }, []);
 
   if (loading) return <p className="text-gray-500">Henter værdata…</p>;
+  if (!motivation) return null;
 
   return (
     <div className="p-4 mt-4 bg-blue-50 rounded shadow text-center">
       <p className="text-md font-medium">{motivation}</p>
-
-      {/* Debug info — kan fjernes senere */}
-      {debug && (
-        <pre className="text-xs text-gray-400 mt-2 whitespace-pre-line">
-          {debug}
-        </pre>
-      )}
     </div>
   );
 }
