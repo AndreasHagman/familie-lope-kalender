@@ -128,7 +128,7 @@ export default function LogKmModal({
             )}
 
             {/* Manuell input */}
-            {(manualMode) && (
+            {(manualMode || !stravaAccessToken) && (
             <input
                 type="number"
                 min="0"
