@@ -6,6 +6,7 @@ import { db } from "../firebase/firebaseConfig";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import LogKmModal from "../components/LogKmModal";
+import WeatherMotivator from "../components/WeatherMotivator";
 
 // 🔥 Hent/trrekk dagens km fra Firestore
 async function getKmForToday() {
@@ -149,6 +150,7 @@ export default function Dashboard() {
       </h2>
 
       <div className="relative z-10 flex flex-col items-center">
+        <WeatherMotivator />   {/* 👈 Legg inn her */}
         {dailyKm === null ? (
           <p className="text-center text-lg">Henter dagens luke...</p>
         ) : (
