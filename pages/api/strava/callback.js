@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     });
     console.log("✅ Strava tokens merged and saved to Firestore");
 
-    res.redirect("/strava"); // redirect to Strava profile page
+    res.redirect("/stravaProfil"); // redirect to Strava profile page
   } catch (err) {
     console.error("Strava callback error:", err);
     res.status(500).send("Strava callback failed");
