@@ -27,18 +27,19 @@ function LogModal({ open, onClose, onSubmit, existingValue }) {
           >
 
             {/* 🔥 VIS EKSISTERENDE REGISTRERING */}
-            <div className="mb-4 text-center">
-              {existingValue !== undefined ? (
-                <p className="text-sm text-gray-700">
-                  Du har allerede registrert:  
-                  <span className="font-bold text-juleRød"> {existingValue} km</span>
-                </p>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  Ingen data registrert for denne dagen.
-                </p>
-              )}
-            </div>
+           <div className="mb-4 text-center">
+            {existingValue !== undefined ? (
+              <p className="text-sm text-gray-700">
+                Du har allerede registrert:  
+                <span className="font-bold text-juleRød"> {existingValue.km} km</span><br/>
+                <span className="text-gray-500 text-xs">Registrert: {new Date(existingValue.time).toLocaleDateString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Ingen data registrert for denne dagen.
+              </p>
+            )}
+          </div>
 
             <h2 className="text-xl font-bold mb-4 text-center">Logg løpeturen</h2>
 
@@ -119,19 +120,26 @@ export default function Luker() {
   }, [user, loading]);
 
   const handleSubmit = async (kmValue) => {
-    if (isNaN(kmValue)) return;
+  if (isNaN(kmValue)) return;
 
-    try {
-      const userRef = doc(db, "users", user.uid);
-      const newLog = { ...logData, [selectedDate]: kmValue };
+  try {
+    const userRef = doc(db, "users", user.uid);
 
-      await updateDoc(userRef, { log: newLog });
-      setLogData(newLog);
-      setModalOpen(false);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    // Ny struktur: { km, time }
+    const newLogEntry = {
+      km: kmValue,
+      time: new Date().toISOString(), // registrerings-tidspunkt
+    };
+
+    const newLog = { ...logData, [selectedDate]: newLogEntry };
+
+    await updateDoc(userRef, { log: newLog });
+    setLogData(newLog);
+    setModalOpen(false);
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   const canOpen = (dateStr) => {
     if (dateStr === today) return false; // dagens luke åpnes kun på dashboard
