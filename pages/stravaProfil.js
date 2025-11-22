@@ -5,6 +5,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import StravaKeyword from "../components/StravaKeyword";
 import StravaTodayActivities from "../components/StravaTodayActivities";
 import { fetchStravaAthlete } from "../utils/stravaClient";
+import { getValidStravaAccessToken } from "../utils/stravaAuth";
 
 export default function StravaProfile() {
   const [user, setUser] = useState(null);
@@ -40,7 +41,17 @@ export default function StravaProfile() {
 
         // Hvis access token finnes → hent athlete-info
         if (data.access_token) {
-          const athleteData = await fetchStravaAthlete(data.access_token);
+          // 1. Refresh token (if needed)
+          const token = await getValidStravaAccessToken(u.uid);
+          // 2. Hvis token ble oppdatert → hent hele oppdaterte strava-objektet
+          if (token !== data.access_token) {
+            const freshSnap = await getDoc(doc(db, "users", u.uid));
+            const freshStrava = freshSnap.data().strava;
+            setStrava(freshStrava);
+          }
+
+          // 3. Hent athlete-data med gyldig token
+          const athleteData = await fetchStravaAthlete(token);
           setAthlete(athleteData);
         }
       }

@@ -109,26 +109,42 @@ export default function Dashboard() {
     }
   }, [user, loading]);
 
-  const handleSubmit = async (kmValue) => {
-    if (isNaN(kmValue)) return;
+  const handleSubmit = async (kmValue, timeValue) => {
+  if (isNaN(kmValue)) return;
 
-    try {
-      const docRef = doc(db, "users", user.uid);
-      const newLog = { ...logData, [today]: kmValue };
+  // Hvis Strava ikke ga oss tidspunkt → bruk nåværende tidspunkt
+  const timestamp = timeValue || new Date().toISOString();
 
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        await updateDoc(docRef, { log: newLog });
-      } else {
-        await setDoc(docRef, { log: newLog, displayName: user.displayName || user.email });
-      }
+  try {
+    const docRef = doc(db, "users", user.uid);
 
-      setLogData(newLog);
-      router.push("/familie");
-    } catch (err) {
-      console.error(err);
+    // Ny struktur for dagens logg
+    const newLog = {
+      ...logData,
+      [today]: {
+        km: kmValue,
+        time: timestamp,
+      },
+    };
+
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      await updateDoc(docRef, { log: newLog });
+    } else {
+      await setDoc(docRef, {
+        log: newLog,
+        displayName: user.displayName || user.email,
+      });
     }
-  };
+
+    setLogData(newLog);
+    router.push("/familie");
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 
   // Snøballer
   const snowballs = Array.from({ length: 50 });

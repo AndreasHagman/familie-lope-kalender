@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchTodaysStravaActivities } from "../utils/stravaClient";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+import { getValidStravaAccessToken } from "../utils/stravaAuth";
 
 export default function LogKmModal({
   open,
@@ -17,6 +18,7 @@ export default function LogKmModal({
   const [loadingStrava, setLoadingStrava] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [keyWord, setKeyWord] = useState("luke"); // fallback
+  const [stravaTime, setStravaTime] = useState(null);
 
   const switchToManual = () => {
   setManualMode(true);
@@ -40,26 +42,54 @@ export default function LogKmModal({
 
   // 🔹 Hent Strava-data ved åpning
   useEffect(() => {
+  async function run() {
     if (open && stravaAccessToken && !manualMode) {
       setLoadingStrava(true);
 
-      fetchTodaysStravaActivities(stravaAccessToken, keyWord)
-        .then((km) => {
-          if (Number(km) > 0) {
-            setStravaKm(km);
-          } else {
-            setStravaKm(null);
-          }
-        })
-        .finally(() => setLoadingStrava(false));
+      const validToken = await getValidStravaAccessToken(user.uid);
+      const result = await fetchTodaysStravaActivities(validToken, keyWord);
+
+      if (result) {
+        setStravaKm(result.km);
+        setStravaTime(result.time);
+      } else {
+        setStravaKm(null);
+        setStravaTime(null);
+      }
+
+      setLoadingStrava(false);
     }
-  }, [open, stravaAccessToken, manualMode, keyWord]);
+  }
+
+  run();
+}, [open, stravaAccessToken, manualMode, keyWord]);
+
+  function getLocalIsoDateTime() {
+    const now = new Date();
+    
+    // Lag ISO med lokal tid, 24-timers format, uten timezone-justering
+    const pad = (n) => n.toString().padStart(2, "0");
+
+    const YYYY = now.getFullYear();
+    const MM = pad(now.getMonth() + 1);
+    const DD = pad(now.getDate());
+    const HH = pad(now.getHours());
+    const mm = pad(now.getMinutes());
+    const ss = pad(now.getSeconds());
+
+    return `${YYYY}-${MM}-${DD}T${HH}:${mm}:${ss}`; // "YYYY-MM-DDTHH:mm:ss"
+  }
 
   const handleSubmit = () => {
     const kmValue = manualMode ? Number(kmLogged) : Number(stravaKm);
     if (isNaN(kmValue) || kmValue <= 0) return;
 
-    onSubmit(kmValue);
+    // ⏱ Sett tidspunkt
+  const timeValue = manualMode
+    ? getLocalIsoDateTime()
+    : stravaTime || getLocalIsoDateTime(); // fallback hvis Strava mangler tid
+
+    onSubmit(kmValue, timeValue);
     setKmLogged("");
     setStravaKm(null);
     setManualMode(false);
@@ -88,8 +118,9 @@ export default function LogKmModal({
                 <p className="text-sm text-gray-700">
                   Du har allerede registrert:  
                   <span className="font-bold text-juleRød">
-                    {" "} {existingLogForToday} km
+                    {" "}{existingLogForToday.km} km
                   </span>
+                  {" "}kl {new Date(existingLogForToday.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </p>
               ) : (
                 <p className="text-sm text-gray-500">
