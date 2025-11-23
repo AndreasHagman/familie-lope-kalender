@@ -25,21 +25,26 @@ function LogModal({ open, onClose, onSubmit, existingValue }) {
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-
-            {/* 🔥 VIS EKSISTERENDE REGISTRERING */}
-           <div className="mb-4 text-center">
-            {existingValue !== undefined ? (
-              <p className="text-sm text-gray-700">
-                Du har allerede registrert:  
-                <span className="font-bold text-juleRød"> {existingValue.km} km</span><br/>
-                <span className="text-gray-500 text-xs">Registrert: {new Date(existingValue.time).toLocaleDateString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-              </p>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Ingen data registrert for denne dagen.
-              </p>
-            )}
-          </div>
+            <div className="mb-4 text-center">
+              {existingValue !== undefined ? (
+                <p className="text-sm text-gray-700">
+                  Du har allerede registrert:
+                  <span className="font-bold text-juleRød"> {existingValue.km} km</span><br/>
+                  <span className="text-gray-500 text-xs">
+                    Registrert:{" "}
+                    {new Date(existingValue.time).toLocaleDateString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Ingen data registrert for denne dagen.
+                </p>
+              )}
+            </div>
 
             <h2 className="text-xl font-bold mb-4 text-center">Logg løpeturen</h2>
 
@@ -82,9 +87,10 @@ export default function Luker() {
   const [logData, setLogData] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [openedDates, setOpenedDates] = useState({}); // <-- tracker hvilke luker som er snudd
+  const [openedDates, setOpenedDates] = useState({});
 
-  const today = new Date().toISOString().slice(0, 10);
+  //const today = new Date().toISOString().slice(0, 10);
+  const today = "2025-11-23"; 
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -104,12 +110,13 @@ export default function Luker() {
 
       const data = (await getDoc(userRef)).data();
       setLogData(data.log || {});
-      // Automatisk åpne alle luker med registrert km
-        const initialOpened = {};
-        Object.keys(data.log || {}).forEach(date => {
+
+      // Åpne automatisk alle luker med registrert km
+      const initialOpened = {};
+      Object.keys(data.log || {}).forEach((date) => {
         initialOpened[date] = true;
-        });
-        setOpenedDates(initialOpened);
+      });
+      setOpenedDates(initialOpened);
 
       const kmRef = doc(db, "config", "dailyKmSelected");
       const kmSnap = await getDoc(kmRef);
@@ -120,45 +127,43 @@ export default function Luker() {
   }, [user, loading]);
 
   const handleSubmit = async (kmValue) => {
-  if (isNaN(kmValue)) return;
+    if (isNaN(kmValue)) return;
 
-  try {
-    const userRef = doc(db, "users", user.uid);
+    try {
+      const userRef = doc(db, "users", user.uid);
 
-    // Ny struktur: { km, time }
-    const newLogEntry = {
-      km: kmValue,
-      time: new Date().toISOString(), // registrerings-tidspunkt
-    };
+      const newLogEntry = {
+        km: kmValue,
+        time: new Date().toISOString(),
+      };
 
-    const newLog = { ...logData, [selectedDate]: newLogEntry };
+      const newLog = { ...logData, [selectedDate]: newLogEntry };
 
-    await updateDoc(userRef, { log: newLog });
-    setLogData(newLog);
-    setModalOpen(false);
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-  const canOpen = (dateStr) => {
-    if (dateStr === today) return false; // dagens luke åpnes kun på dashboard
-    if (dateStr < today) return true;    // tidligere datoer kan åpnes
-    return false;                         // fremtidige datoer låst
+      await updateDoc(userRef, { log: newLog });
+      setLogData(newLog);
+      setModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // Desember 1–24 i år
+  const canOpen = (dateStr) => {
+    if (dateStr === today) return false;
+    if (dateStr < today) return true;
+    return false;
+  };
+
+  // 1–24 desember
   const year = new Date().getFullYear();
   const days = Array.from({ length: 24 }).map((_, i) => {
     const day = (i + 1).toString().padStart(2, "0");
-    return `${year}-11-${day}`; // desember
+    return `${year}-11-${day}`;
+    //return `${year}-12-${day}`;
   });
 
   return (
-   <div className="relative h-full px-4 sm:px-8 py-2 overflow-hidden no-scroll">
-      <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">
-        Alle luker
-      </h2>
+    <div className="relative h-full px-4 sm:px-8 py-2 overflow-hidden no-scroll">
+      <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">Alle luker</h2>
 
       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 max-w-2xl mx-auto">
         {days.map((dateStr) => {
@@ -169,28 +174,24 @@ export default function Luker() {
           return (
             <div
               key={dateStr}
+              className={`cursor-pointer transform transition hover:scale-105 ${canOpen(dateStr) ? "" : "opacity-40 cursor-not-allowed"}`}
               onClick={() => {
                 if (!canOpen(dateStr) || km === undefined) return;
 
                 if (!opened) {
-                  // Første klikk: snu luken
                   setOpenedDates((prev) => ({ ...prev, [dateStr]: true }));
                 } else {
-                  // Andre klikk: åpne modal
                   setSelectedDate(dateStr);
                   setModalOpen(true);
                 }
               }}
-              className={`cursor-pointer transform transition hover:scale-105 ${
-                canOpen(dateStr) ? "" : "opacity-40 cursor-not-allowed"
-              }`}
             >
               <CalendarCard
                 date={dateStr}
                 km={km}
-                isOpenable={opened}
                 small
-                forceOpen={opened} 
+                isOpen={opened}
+                openTrigger={opened ? 1 : 0} 
                 showNumericDate={true}
                 showDateOnBack={true}
               />
@@ -203,8 +204,8 @@ export default function Luker() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
-        existingValue={logData[selectedDate]}   // ← legger inn brukerens tidligere logg
-    />
+        existingValue={logData[selectedDate]}
+      />
     </div>
   );
 }
