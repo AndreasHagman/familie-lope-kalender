@@ -56,7 +56,13 @@ const daysWithActivity = logs.filter((l) => l.km > 0).length;
 const avgKm = logs.length > 0 ? (totalKm / logs.length).toFixed(1) : 0;
 
 return (
-  <div className="max-w-xl mx-auto p-6">
+  <div className="max-w-xl mx-auto p-2">
+        <button
+      onClick={() => router.back()}
+      className="mb-4 flex items-center text-juleRød hover:underline"
+    >
+      ← Tilbake
+    </button>
     <h1 className="text-3xl font-bold mb-4">
       {userData?.displayName || "Familiemedlem"}
     </h1>

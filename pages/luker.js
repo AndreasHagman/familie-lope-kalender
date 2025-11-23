@@ -155,7 +155,7 @@ export default function Luker() {
   });
 
   return (
-   <div className="relative h-full px-4 sm:px-8 py-6 overflow-hidden no-scroll">
+   <div className="relative h-full px-4 sm:px-8 py-2 overflow-hidden no-scroll">
       <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">
         Alle luker
       </h2>

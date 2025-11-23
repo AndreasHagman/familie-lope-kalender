@@ -87,7 +87,7 @@ export default function StravaProfile() {
   }
 
   return (
-    <div className="max-w-lg mx-auto p-8">
+    <div className="max-w-lg mx-auto p-3">
       <h1 className="text-3xl font-bold mb-6">Strava-integrasjon</h1>
 
       {/* Ikke tilkoblet */}

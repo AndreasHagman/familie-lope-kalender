@@ -150,7 +150,7 @@ export default function Dashboard() {
   const snowballs = Array.from({ length: 50 });
 
   return (
-    <div className="relative h-full bg-gradient-to-b from-blue-50 to-white overflow-hidden px-4 sm:px-8 py-6 no-scroll">
+    <div className="relative h-full bg-gradient-to-b from-blue-50 to-white overflow-hidden px-4 sm:px-8 py-2 no-scroll">
       {snowballs.map((_, i) => (
         <motion.div
           key={i}

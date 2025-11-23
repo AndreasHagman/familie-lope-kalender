@@ -49,7 +49,7 @@ export default function LogKmModal({
       const validToken = await getValidStravaAccessToken(user.uid);
       const result = await fetchTodaysStravaActivities(validToken, keyWord);
 
-      if (result) {
+      if (result && result.km > 0) {
         setStravaKm(result.km);
         setStravaTime(result.time);
       } else {

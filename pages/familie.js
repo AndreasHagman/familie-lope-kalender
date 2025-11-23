@@ -33,7 +33,7 @@ export default function Familie() {
   const totalGoal = dailyKmList.reduce((sum, km) => sum + km, 0);
 
   return (
-  <div className="px-4 sm:px-8 py-6">
+  <div className="px-4 sm:px-8 py-2">
     <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">Familien</h2>
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

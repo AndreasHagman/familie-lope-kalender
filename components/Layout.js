@@ -23,7 +23,7 @@ export default function Layout({ children }) {
     <div className="relative flex flex-col min-h-screen bg-gray-50">
       <div className="snow"></div>
 
-      <header className="bg-white shadow py-4 sticky top-0 z-20 flex-shrink-0">
+      <header className="bg-white shadow py-0 sticky top-0 z-20 flex-shrink-0">
         <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center px-4">
           <h1 className="fest-title text-3xl text-juleRød mb-2 sm:mb-0">
             Kvale's Løpekalender
