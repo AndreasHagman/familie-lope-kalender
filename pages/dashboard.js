@@ -70,6 +70,19 @@ export default function Dashboard() {
   const [today] = useState(new Date().toISOString().slice(0, 10));
   const [existingLogForToday, setExistingLogForToday] = useState(undefined);
   const [stravaAccessToken, setStravaAccessToken] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [openTrigger, setOpenTrigger] = useState(0);
+
+ const handleCardClick = () => {
+  setIsOpen(prev => !prev);
+    };
+
+    // 🔥 Trigger juletrær når kortet GÅR FRA lukket → åpent
+    useEffect(() => {
+      if (isOpen) {
+        setOpenTrigger(t => t + 1);
+      }
+    }, [isOpen]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -169,7 +182,15 @@ export default function Dashboard() {
         {dailyKm === null ? (
           <p className="text-center text-lg">Henter dagens luke...</p>
         ) : (
-          <CalendarCard date={today} km={dailyKm} isOpenable={true} />
+          <div onClick={handleCardClick}>
+            <CalendarCard
+              date={today}
+              km={dailyKm}
+              isOpenable={true}
+              isOpen={isOpen}
+              openTrigger={openTrigger}
+            />
+          </div>
         )}
 
         <LogKmButton
@@ -178,7 +199,8 @@ export default function Dashboard() {
           stravaAccessToken={stravaAccessToken}
           user={user}
         />
-        <WeatherMotivator />   {/* 👈 Legg inn her */}
+
+        <WeatherMotivator />
       </div>
     </div>
   );
