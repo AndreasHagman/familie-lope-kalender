@@ -15,33 +15,35 @@ export async function getKmForToday() {
   }
 
   // 2. Hent listen over resterende tall
-let remainingSnap = await getDoc(remainingRef);
-let remaining = remainingSnap.exists() ? [...remainingSnap.data().list] : [];
+  let remainingSnap = await getDoc(remainingRef);
+  let remaining = remainingSnap.exists() ? [...remainingSnap.data().list] : [];
 
-// Hvis listen ikke finnes eller tom, lag basert på originallisten
-if (!remaining || remaining.length === 0) {
-  const originalSnap = await getDoc(originalRef);
-  remaining = [...(originalSnap.data()?.list || [])];
-}
+  // Hvis listen ikke finnes eller er tom, lag basert på originallisten
+  if (!remaining || remaining.length === 0) {
+    const originalSnap = await getDoc(originalRef);
+    remaining = [...(originalSnap.data()?.list || [])];
+  }
 
-// 3. Finn dagens tall
-let kmForToday;
-if (weekday === 0) kmForToday = 0;
-else if (weekday === 1) kmForToday = 7;
-else {
-  const index = Math.floor(Math.random() * remaining.length);
-  kmForToday = remaining[index];
-}
+  // 3. Trekk dagens tall (inkl. helgedags-regel)
+  const weekday = new Date(today).getDay(); // <-- MÅ være med!
 
-// 4. Fjern **bare én forekomst** av dagens tall fra remaining
-const removeIndex = remaining.indexOf(kmForToday);
-if (removeIndex !== -1) remaining.splice(removeIndex, 1);
+  let kmForToday;
+  if (weekday === 0) kmForToday = 0;      // søndag
+  else if (weekday === 1) kmForToday = 7; // mandag
+  else {
+    const index = Math.floor(Math.random() * remaining.length);
+    kmForToday = remaining[index];
+  }
 
-// 5. Lagre dagens trekk
-await setDoc(selectedRef, { [today]: kmForToday }, { merge: true });
+  // 4. Fjern **bare én forekomst** av dagens tall fra remaining
+  const removeIndex = remaining.indexOf(kmForToday);
+  if (removeIndex !== -1) remaining.splice(removeIndex, 1);
 
-// 6. Oppdater remaining-listen
-await setDoc(remainingRef, { list: remaining }, { merge: true });
+  // 5. Lagre dagens trekk
+  await setDoc(selectedRef, { [today]: kmForToday }, { merge: true });
+
+  // 6. Oppdater remaining-listen
+  await setDoc(remainingRef, { list: remaining }, { merge: true });
 
   return kmForToday;
 }

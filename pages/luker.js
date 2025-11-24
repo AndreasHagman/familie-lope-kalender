@@ -89,8 +89,8 @@ export default function Luker() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [openedDates, setOpenedDates] = useState({});
 
-  //const today = new Date().toISOString().slice(0, 10);
-  const today = "2025-11-23"; 
+  const today = new Date().toISOString().slice(0, 10);
+  //const today = "2025-11-24"; 
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -157,8 +157,8 @@ export default function Luker() {
   const year = new Date().getFullYear();
   const days = Array.from({ length: 24 }).map((_, i) => {
     const day = (i + 1).toString().padStart(2, "0");
-    return `${year}-11-${day}`;
-    //return `${year}-12-${day}`;
+    //return `${year}-11-${day}`;
+    return `${year}-12-${day}`;
   });
 
   return (

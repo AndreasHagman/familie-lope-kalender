@@ -3,35 +3,11 @@ import { useRouter } from "next/router";
 import { useEffect, useState, useMemo } from "react";
 import CalendarCard from "../components/CalendarCard";
 import { db } from "../firebase/firebaseConfig";
+import { getKmForToday } from "../firebase/getDailyKm";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import LogKmModal from "../components/LogKmModal";
 import WeatherMotivator from "../components/WeatherMotivator";
-
-async function getKmForToday() {
-  const today = new Date().toISOString().slice(0, 10);
-  const selectedRef = doc(db, "config", "dailyKmSelected");
-  const dailyListRef = doc(db, "config", "dailyKm");
-
-  const selectedSnap = await getDoc(selectedRef);
-  if (selectedSnap.exists() && selectedSnap.data()[today] !== undefined) {
-    return selectedSnap.data()[today];
-  }
-
-  const listSnap = await getDoc(dailyListRef);
-  const list = listSnap.data()?.list || [];
-
-  const weekday = new Date(today).getDay();
-  const reserved = [7, 7, 7, 7, 0, 0, 0, 0];
-
-  const kmForToday =
-    weekday === 0 ? 0 :
-    weekday === 1 ? 7 :
-    list.filter(v => !reserved.includes(v))[Math.floor(Math.random() * list.length)];
-
-  await setDoc(selectedRef, { [today]: kmForToday }, { merge: true });
-  return kmForToday;
-}
 
 function LogKmButton({ onSubmit, existingLogForToday, stravaAccessToken, user }) {
   const [modalOpen, setModalOpen] = useState(false);

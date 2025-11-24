@@ -99,7 +99,12 @@ return (
           <p>
             <span className="font-semibold">{l.date}</span> — {l.km} km
             {l.time && (
-              <span className="text-gray-500 ml-2">({new Date(l.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })})</span>
+              <span className="text-gray-500 ml-2">(Registrert:{" "}
+                    {new Date(l.time).toLocaleDateString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })})</span>
             )}
           </p>
         </div>
