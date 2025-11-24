@@ -46,6 +46,10 @@ export default function Dashboard() {
   const [openTrigger, setOpenTrigger] = useState(0);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const now = new Date();
+  const isDecember = now.getMonth() === 11; // 11 = desember
+  const dayOfMonth = now.getDate();
+  const isValidAdventDay = isDecember && dayOfMonth >= 1 && dayOfMonth <= 24;
 
   const handleCardClick = () => setIsOpen(prev => !prev);
 
@@ -131,28 +135,46 @@ export default function Dashboard() {
       </h2>
 
       <div className="relative z-10 flex flex-col items-center">
-        {dailyKm == null ? (
-          <p>Henter dagens luke...</p>
-        ) : (
-          <div onClick={handleCardClick}>
-            <CalendarCard
-              date={today}
-              km={dailyKm}
-              isOpen={isOpen}
-              openTrigger={openTrigger}
-            />
-          </div>
-        )}
 
-        <LogKmButton
-          onSubmit={handleSubmit}
-          existingLogForToday={existingLogForToday}
-          stravaAccessToken={stravaAccessToken}
-          user={user}
-        />
+  {!isValidAdventDay ? (
+    <>
+      <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">
+        🎅 Snart desember!
+      </h2>
+      <p className="text-center text-gray-700 max-w-md">
+        Adventskalenderen åpner 1. desember, og frem til da er nissene travelt opptatt 
+        med å pakke inn løpemotivasjon og juleglede.  
+        <br /><br />
+        Kom tilbake da for å åpne første luke! 🎁✨
+      </p>
+    </>
+  ) : (
+    <>
+      {dailyKm == null ? (
+        <p>Henter dagens luke...</p>
+      ) : (
+        <div onClick={handleCardClick}>
+          <CalendarCard
+            date={today}
+            km={dailyKm}
+            isOpen={isOpen}
+            openTrigger={openTrigger}
+          />
+        </div>
+      )}
 
-        <WeatherMotivator />
-      </div>
+      <LogKmButton
+        onSubmit={handleSubmit}
+        existingLogForToday={existingLogForToday}
+        stravaAccessToken={stravaAccessToken}
+        user={user}
+      />
+
+      <WeatherMotivator />
+    </>
+  )}
+
+</div>
     </div>
   );
 }
