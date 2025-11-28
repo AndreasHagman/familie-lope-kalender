@@ -4,7 +4,9 @@ import { getWeatherMotivation } from "../utils/weatherMotivation";
 export default function WeatherMotivator() {
   const [motivation, setMotivation] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [debug, setDebug] = useState(null); // 👈 for feilsøking
+
+  // 🌤️ Her lagres selve vær-dataene (temp, vind osv.)
+  const [weather, setWeather] = useState(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -18,18 +20,21 @@ export default function WeatherMotivator() {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
 
-        setDebug(`Posisjon funnet: ${lat}, ${lon}`);
-
         try {
           const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
           const data = await res.json();
 
-          console.log("WEATHER RESPONSE:", data);
-          setDebug((prev) => prev + "\nAPI OK");
-
           if (data.error) {
             setMotivation("Kunne ikke hente værdata.");
           } else {
+            setWeather({
+              temp: data.main.temp,
+              feelsLike: data.main.feels_like,
+              wind: data.wind.speed,
+              icon: data.weather?.[0]?.icon,
+              description: data.weather?.[0]?.description,
+            });
+
             setMotivation(getWeatherMotivation(data));
           }
         } catch (err) {
@@ -40,8 +45,8 @@ export default function WeatherMotivator() {
         setLoading(false);
       },
       (err) => {
-        setMotivation(null);
         console.error("Geo error:", err);
+        setMotivation(null);
         setLoading(false);
       }
     );
@@ -52,7 +57,36 @@ export default function WeatherMotivator() {
 
   return (
     <div className="p-4 mt-4 bg-blue-50 rounded shadow text-center">
-      <p className="text-md font-medium">{motivation}</p>
+
+      {/* 🎯 Motivasjonsteksten */}
+      <p className="text-md font-medium mb-3">{motivation}</p>
+
+      {/* 🌡️ Vær-detaljer */}
+      {weather && (
+        <div className="flex flex-col items-center text-sm text-gray-700">
+
+          {/* Ikon fra OpenWeather */}
+          {weather.icon && (
+            <img
+              src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+              alt="Weather icon"
+              className="w-14 h-14 mb-1"
+            />
+          )}
+
+          <p>
+            <strong>{weather.temp.toFixed(1)}°C</strong> ({weather.description})
+          </p>
+
+          <p className="text-gray-600">
+            Føles som: {weather.feelsLike.toFixed(1)}°C
+          </p>
+
+          <p className="text-gray-600">
+            Vind: {weather.wind.toFixed(1)} m/s
+          </p>
+        </div>
+      )}
     </div>
   );
 }
