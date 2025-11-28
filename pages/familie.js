@@ -26,40 +26,57 @@ export default function Familie() {
         }));
         setUsersData(usersArr);
       };
+
       fetchData();
     }
   }, [user, loading]);
 
+  // 🔥 Filter users directly in render:
+  const usersWithLogs = usersData.filter(
+    (u) => Object.keys(u.log || {}).length > 0
+  );
+
   const totalGoal = dailyKmList.reduce((sum, km) => sum + km, 0);
 
   return (
-  <div className="px-4 sm:px-8 py-2">
-    <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">Familien</h2>
+    <div className="px-4 sm:px-8 py-2">
+      <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">
+        Familien
+      </h2>
 
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {usersData.map((u) => {
-        // Sum all km from the log objects
-        const totalLogged = Object.values(u.log).reduce((acc, entry) => {
-          return acc + (entry.km || 0);
-        }, 0);
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-        const progress = Math.min((totalLogged / totalGoal) * 100, 100);
+        {/* ❗ Show message if nobody has logged anything */}
+        {usersWithLogs.length === 0 && (
+          <p className="text-center text-gray-600 col-span-2 text-lg">
+            Ingen har registrert noen kilometer enda. 🏃‍♂️✨  
+            Blir det du som åpner løpeballet? 🎄
+          </p>
+        )}
 
-        return (
-          <Link key={u.id} href={`/familie/${u.id}`}>
-            <div className="bg-white rounded-lg shadow p-4 flex flex-col space-y-2 cursor-pointer hover:bg-gray-50 transition">
-              <p className="font-semibold text-lg">{u.displayName}</p>
+        {/* Render only users who HAVE logged */}
+        {usersWithLogs.map((u) => {
+          const totalLogged = Object.values(u.log).reduce((acc, entry) => {
+            return acc + (entry.km || 0);
+          }, 0);
 
-              <p className="text-sm text-gray-700">
-                {totalLogged} km av {totalGoal} km
-              </p>
+          const progress = Math.min((totalLogged / totalGoal) * 100, 100);
 
-              <ProgressBar progress={progress} />
-            </div>
-          </Link>
-        );
-      })}
+          return (
+            <Link key={u.id} href={`/familie/${u.id}`}>
+              <div className="bg-white rounded-lg shadow p-4 flex flex-col space-y-2 cursor-pointer hover:bg-gray-50 transition">
+                <p className="font-semibold text-lg">{u.displayName}</p>
+
+                <p className="text-sm text-gray-700">
+                  {totalLogged} km av {totalGoal} km
+                </p>
+
+                <ProgressBar progress={progress} />
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
 }
