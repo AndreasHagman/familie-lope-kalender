@@ -19,23 +19,40 @@ export async function getValidStravaAccessToken(userId) {
   }
 
   // refresh on backend
-  const res = await fetch("/api/strava/refresh", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token }),
-  });
+  try {
+    const res = await fetch("/api/strava/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token }),
+    });
 
-  const json = await res.json();
-  if (!json.access_token) return null;
+    if (!res.ok) {
+      console.error("Failed to refresh Strava token");
+      return null;
+    }
 
-  // update Firebase
-  await updateDoc(userRef, {
-    strava: {
-      access_token: json.access_token,
-      refresh_token: json.refresh_token,
-      expires_at: json.expires_at,
-    },
-  });
+    const json = await res.json();
+    if (!json.access_token) return null;
 
-  return json.access_token;
+    // Verify document still exists before updating
+    const verifySnap = await getDoc(userRef);
+    if (!verifySnap.exists()) {
+      console.error("User document no longer exists");
+      return null;
+    }
+
+    // update Firebase
+    await updateDoc(userRef, {
+      strava: {
+        access_token: json.access_token,
+        refresh_token: json.refresh_token,
+        expires_at: json.expires_at,
+      },
+    });
+
+    return json.access_token;
+  } catch (err) {
+    console.error("Error refreshing Strava token:", err);
+    return null;
+  }
 }

@@ -94,7 +94,10 @@ export default function Luker() {
   //const today = "2025-11-24"; 
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login");
+    if (!loading && !user) {
+      router.push("/login");
+      return;
+    }
     if (!user) return;
 
     const fetchData = async () => {
@@ -125,7 +128,7 @@ export default function Luker() {
     };
 
     fetchData();
-  }, [user, loading]);
+  }, [user, loading, router]);
 
   const handleSubmit = async (kmValue) => {
     if (isNaN(kmValue)) return;
@@ -144,7 +147,8 @@ export default function Luker() {
       setLogData(newLog);
       setModalOpen(false);
     } catch (err) {
-      console.error(err);
+      console.error("Error saving log:", err);
+      alert("Kunne ikke lagre løpeturen. Prøv igjen.");
     }
   };
 

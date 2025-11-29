@@ -39,9 +39,15 @@ export default async function handler(req, res) {
 
     // Get existing user document
     const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      console.error("User document does not exist");
+      return res.status(404).send("User not found");
+    }
 
     // Save merged data
-   // Save only Strava tokens, keep existing fields untouched
+    // Save only Strava tokens, keep existing fields untouched
     await updateDoc(userRef, {
         strava: {
             access_token: tokenData.access_token,

@@ -47,7 +47,7 @@ export default function Dashboard() {
   const [openTrigger, setOpenTrigger] = useState(0);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const isValidAdventDay = isWithinAdventPeriod();
+  const isValidAdventDay = useMemo(() => isWithinAdventPeriod(), []);
 
   const handleCardClick = () => setIsOpen(prev => !prev);
 
@@ -88,32 +88,37 @@ export default function Dashboard() {
     };
 
     loadUser();
-  }, [user, loading, today, router]);
+  }, [user, loading, today, isValidAdventDay]);
 
   const handleSubmit = async (kmValue, timeValue) => {
     if (isNaN(kmValue)) return;
 
-    const timestamp = timeValue || new Date().toISOString();
-    const docRef = doc(db, "users", user.uid);
+    try {
+      const timestamp = timeValue || new Date().toISOString();
+      const docRef = doc(db, "users", user.uid);
 
-    const newLog = {
-      ...logData,
-      [today]: { km: kmValue, time: timestamp },
-    };
+      const newLog = {
+        ...logData,
+        [today]: { km: kmValue, time: timestamp },
+      };
 
-    const snap = await getDoc(docRef);
+      const snap = await getDoc(docRef);
 
-    if (snap.exists()) {
-      await updateDoc(docRef, { log: newLog });
-    } else {
-      await setDoc(docRef, {
-        log: newLog,
-        displayName: user.displayName || user.email,
-      });
+      if (snap.exists()) {
+        await updateDoc(docRef, { log: newLog });
+      } else {
+        await setDoc(docRef, {
+          log: newLog,
+          displayName: user.displayName || user.email,
+        });
+      }
+
+      setLogData(newLog);
+      router.push("/familie");
+    } catch (err) {
+      console.error("Error saving log:", err);
+      alert("Kunne ikke lagre løpeturen. Prøv igjen.");
     }
-
-    setLogData(newLog);
-    router.push("/familie");
   };
 
   return (

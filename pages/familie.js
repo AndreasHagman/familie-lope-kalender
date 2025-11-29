@@ -14,7 +14,10 @@ export default function Familie() {
   const [usersData, setUsersData] = useState([]);
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login");
+    if (!loading && !user) {
+      router.push("/login");
+      return;
+    }
 
     if (user) {
       const fetchData = async () => {
@@ -30,7 +33,7 @@ export default function Familie() {
 
       fetchData();
     }
-  }, [user, loading]);
+  }, [user, loading, router]);
 
   // 🔥 Filter users directly in render:
   const usersWithLogs = usersData.filter(
