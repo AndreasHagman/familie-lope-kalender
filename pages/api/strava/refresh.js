@@ -9,7 +9,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.STRAVA_CLIENT_ID,
+        client_id: process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID,
         client_secret: process.env.STRAVA_CLIENT_SECRET,
         grant_type: "refresh_token",
         refresh_token,
