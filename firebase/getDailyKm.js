@@ -1,12 +1,12 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
+import { initializeDailyKmList } from "./initKmData";
 
 export async function getKmForToday() {
   const today = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
 
   const selectedRef = doc(db, "config", "dailyKmSelected");
   const remainingRef = doc(db, "config", "dailyKmRemaining");
-  const originalRef = doc(db, "config", "dailyKm"); // original full liste
 
   // 1. Sjekk om dagens km allerede er trukket
   const selectedSnap = await getDoc(selectedRef);
@@ -20,9 +20,11 @@ export async function getKmForToday() {
 
   // Hvis listen ikke finnes eller er tom, lag basert på originallisten
   if (!remaining || remaining.length === 0) {
-    const originalSnap = await getDoc(originalRef);
-    remaining = [...(originalSnap.data()?.list || [])];
-  }
+  await initializeDailyKmList();  // sikre at begge listene finnes
+  const refreshed = await getDoc(remainingRef);
+  remaining = [...(refreshed.data()?.list || [])];
+}
+
 
   // 3. Trekk dagens tall (inkl. helgedags-regel)
   const weekday = new Date(today).getDay(); // <-- MÅ være med!

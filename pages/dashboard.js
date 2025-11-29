@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import LogKmModal from "../components/LogKmModal";
 import WeatherMotivator from "../components/WeatherMotivator";
+import { isWithinAdventPeriod } from "../utils/isWithinAdventPeriod";
 
 function LogKmButton({ onSubmit, existingLogForToday, stravaAccessToken, user }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -46,10 +47,7 @@ export default function Dashboard() {
   const [openTrigger, setOpenTrigger] = useState(0);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const now = new Date();
-  const isDecember = now.getMonth() === 11; // 11 = desember
-  const dayOfMonth = now.getDate();
-  const isValidAdventDay = isDecember && dayOfMonth >= 1 && dayOfMonth <= 24;
+  const isValidAdventDay = isWithinAdventPeriod();
 
   const handleCardClick = () => setIsOpen(prev => !prev);
 
@@ -83,7 +81,10 @@ export default function Dashboard() {
       setExistingLogForToday(data.log?.[today]);
       setStravaAccessToken(data.strava?.access_token || null);
 
-      setDailyKm(await getKmForToday());
+      if (isValidAdventDay) {
+        setDailyKm(await getKmForToday());
+      }
+
     };
 
     loadUser();
