@@ -6,6 +6,7 @@ import { useAuth } from "../firebase/AuthContext";
 import { useRouter } from "next/router";
 import { dailyKmList } from "../utils/dailyKm";
 import Link from "next/link";
+import SnowBackground from "../components/SnowBackground";
 
 export default function Familie() {
   const { user, loading } = useAuth();
@@ -39,6 +40,7 @@ export default function Familie() {
   const totalGoal = dailyKmList.reduce((sum, km) => sum + km, 0);
 
   return (
+    <SnowBackground>
     <div className="px-4 sm:px-8 py-2">
       <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">
         Familien
@@ -78,5 +80,6 @@ export default function Familie() {
         })}
       </div>
     </div>
+    </SnowBackground>
   );
 }

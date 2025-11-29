@@ -5,10 +5,10 @@ import CalendarCard from "../components/CalendarCard";
 import { db } from "../firebase/firebaseConfig";
 import { getKmForToday } from "../firebase/getDailyKm";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { motion } from "framer-motion";
 import LogKmModal from "../components/LogKmModal";
 import WeatherMotivator from "../components/WeatherMotivator";
 import { isWithinAdventPeriod } from "../utils/isWithinAdventPeriod";
+import SnowBackground from "../components/SnowBackground";
 
 function LogKmButton({ onSubmit, existingLogForToday, stravaAccessToken, user }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -116,21 +116,9 @@ export default function Dashboard() {
     router.push("/familie");
   };
 
-  const snowballs = useMemo(() => Array.from({ length: 50 }), []);
-
   return (
     <div className="relative h-full bg-gradient-to-b from-blue-50 to-white overflow-hidden px-4 sm:px-8 py-2">
-      
-      {snowballs.map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-2 h-2 bg-white rounded-full"
-          style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * -100}%` }}
-          animate={{ y: ["-10vh", "110vh"] }}
-          transition={{ repeat: Infinity, duration: 3 + Math.random() * 5, delay: Math.random() * 5, ease: "linear" }}
-        />
-      ))}
-
+      <SnowBackground>
       <h2 className="text-3xl fest-title mb-6 text-juleRød text-center relative z-10">
         Dagens luke
       </h2>
@@ -175,7 +163,8 @@ export default function Dashboard() {
     </>
   )}
 
-</div>
     </div>
+    </SnowBackground>
+  </div>
   );
 }

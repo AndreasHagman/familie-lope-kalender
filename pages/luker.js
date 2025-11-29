@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../firebase/firebaseConfig";
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import CalendarCard from "../components/CalendarCard";
+import SnowBackground from "../components/SnowBackground";
 
 function LogModal({ open, onClose, onSubmit, existingValue }) {
   const [km, setKm] = useState("");
@@ -162,6 +163,7 @@ export default function Luker() {
   });
 
   return (
+    <SnowBackground>
     <div className="relative h-full px-4 sm:px-8 py-2 overflow-hidden no-scroll">
       <h2 className="text-3xl fest-title mb-6 text-juleRød text-center">Alle luker</h2>
 
@@ -207,5 +209,6 @@ export default function Luker() {
         existingValue={logData[selectedDate]}
       />
     </div>
+    </SnowBackground>
   );
 }
