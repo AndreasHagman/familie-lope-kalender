@@ -13,20 +13,34 @@ export const config = {
  * Verify Strava webhook signature using client_secret
  */
 function verifyWebhookSignature(rawBody, secret, signatureHeader) {
-    if (!signatureHeader) return false;
-  
-    const hmac = crypto.createHmac("sha256", secret);
-    hmac.update(rawBody.toString("utf8"));
-    const expected = hmac.digest("hex");
-  
-    try {
-      const signatureBuffer = Buffer.from(signatureHeader.replace(/^sha256=/, "").trim(), "hex");
-      const expectedBuffer = Buffer.from(expected, "hex");
-      return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
-    } catch {
-      return false;
-    }
+  if (!signatureHeader) {
+    console.error("❌ Missing x-hub-signature-256 header");
+    return false;
   }
+
+  console.log("🔹 Signature header:", signatureHeader);
+
+  const hmac = crypto.createHmac("sha256", secret);
+  hmac.update(rawBody.toString("utf8"));
+  const expected = hmac.digest("hex");
+  console.log("🔹 Expected HMAC (hex):", expected);
+
+  try {
+    const signatureBuffer = Buffer.from(signatureHeader.replace(/^sha256=/, "").trim(), "hex");
+    const expectedBuffer = Buffer.from(expected, "hex");
+
+    console.log("🔹 signatureBuffer length:", signatureBuffer.length);
+    console.log("🔹 expectedBuffer length:", expectedBuffer.length);
+
+    const valid = crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+    console.log("🔹 timingSafeEqual result:", valid);
+
+    return valid;
+  } catch (err) {
+    console.error("❌ Error in timingSafeEqual:", err);
+    return false;
+  }
+}
 
 /**
  * Fetch or refresh Strava access token using Admin SDK
@@ -42,10 +56,8 @@ async function getValidStravaAccessTokenServer(userId) {
   const { access_token, refresh_token, expires_at } = data;
   const now = Math.floor(Date.now() / 1000);
 
-  // Still valid?
   if (now < expires_at - 300) return access_token;
 
-  // Refresh token
   const res = await fetch("https://www.strava.com/api/v3/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -87,9 +99,7 @@ async function handleWebhookEvent(event) {
   console.log("🔎 Searching for user with athlete ID:", athleteId);
 
   const usersRef = adminDb.collection("users");
-  const querySnapshot = await usersRef
-    .where("strava.athlete.id", "==", athleteId)
-    .get();
+  const querySnapshot = await usersRef.where("strava.athlete.id", "==", athleteId).get();
 
   if (querySnapshot.empty) {
     console.log("❌ No user found for athlete:", athleteId);
@@ -105,10 +115,9 @@ async function handleWebhookEvent(event) {
   const accessToken = await getValidStravaAccessTokenServer(userId);
   if (!accessToken) return;
 
-  const activityRes = await fetch(
-    `https://www.strava.com/api/v3/activities/${activityId}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
+  const activityRes = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
 
   if (!activityRes.ok) {
     console.log("❌ Failed fetching activity:", activityId);
@@ -118,7 +127,6 @@ async function handleWebhookEvent(event) {
   const activity = await activityRes.json();
   const km = Number((activity.distance / 1000).toFixed(2));
 
-  // Keyword filter
   const kw = (userData.stravaKeyWord || "").toLowerCase();
   const name = (activity.name || "").toLowerCase();
   const desc = (activity.description || "").toLowerCase();
@@ -128,7 +136,6 @@ async function handleWebhookEvent(event) {
     return;
   }
 
-  // Date filter (only today)
   const startDate = new Date(activity.start_date_local);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -146,7 +153,6 @@ async function handleWebhookEvent(event) {
 
   const currentLog = snap.data()?.log || {};
   const todayKey = startDate.toISOString().slice(0, 10);
-
   const existing = currentLog[todayKey];
 
   if (existing && new Date(existing.time) >= new Date(time)) {
@@ -160,37 +166,44 @@ async function handleWebhookEvent(event) {
   };
 
   await userRef.update({ log: updated });
-
   console.log(`🎉 Updated log for ${userId}: ${km} km`);
 }
 
+/**
+ * Main API handler
+ */
 export default async function handler(req, res) {
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
 
-  // GET = validation from Strava when creating webhook subscription
+  // GET = validation from Strava
   if (req.method === "GET") {
+    console.log("🔹 GET request for hub.challenge:", req.query["hub.challenge"]);
     return res.status(200).send(req.query["hub.challenge"]);
   }
 
   // POST = webhook event
   if (req.method === "POST") {
-    const rawBody = await getRawBody(req);
-    const signature = req.headers["x-hub-signature-256"];
+    try {
+      const rawBody = await getRawBody(req);
+      console.log("🔹 rawBody length:", rawBody.length);
 
-    // Verify signature
-    if (!verifyWebhookSignature(rawBody, clientSecret, signature)) {
-      console.error("❌ Invalid webhook signature");
-      return res.status(403).send("Invalid signature");
+      const signature = req.headers["x-hub-signature-256"];
+      console.log("🔹 x-hub-signature-256 header:", signature);
+
+      if (!verifyWebhookSignature(rawBody, clientSecret, signature)) {
+        console.error("❌ Invalid webhook signature");
+        return res.status(403).send("Invalid signature");
+      }
+
+      const event = JSON.parse(rawBody.toString("utf8"));
+      console.log("🔹 Parsed event:", event);
+
+      handleWebhookEvent(event).catch((err) => console.error("❌ Webhook event error:", err));
+      return res.status(200).send("OK");
+    } catch (err) {
+      console.error("❌ Error handling webhook:", err);
+      return res.status(500).send("Server error");
     }
-
-    const event = JSON.parse(rawBody.toString("utf8"));
-
-    // Handle event async
-    handleWebhookEvent(event).catch((err) =>
-      console.error("❌ Webhook event error:", err)
-    );
-
-    return res.status(200).send("OK");
   }
 
   return res.status(405).send("Method Not Allowed");
