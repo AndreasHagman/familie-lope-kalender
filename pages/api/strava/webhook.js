@@ -187,8 +187,10 @@ export default async function handler(req, res) {
       const rawBody = await getRawBody(req);
       console.log("🔹 rawBody length:", rawBody.length);
 
-      const signature = req.headers["x-hub-signature-256"];
-      console.log("🔹 x-hub-signature-256 header:", signature);
+    // Try both possible header names
+    const signature =
+    req.headers["x-hub-signature-256"] || req.headers["x-hub-signature"];
+    console.log("🔹 Using signature header:", signature);
 
       if (!verifyWebhookSignature(rawBody, clientSecret, signature)) {
         console.error("❌ Invalid webhook signature");
