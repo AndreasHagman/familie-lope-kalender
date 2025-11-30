@@ -13,21 +13,20 @@ export const config = {
  * Verify Strava webhook signature using client_secret
  */
 function verifyWebhookSignature(rawBody, secret, signatureHeader) {
-  if (!signatureHeader) return false;
-
-  const hmac = crypto.createHmac("sha256", secret);
-  hmac.update(rawBody);
-  const expected = `sha256=${hmac.digest("hex")}`;
-
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(signatureHeader),
-      Buffer.from(expected)
-    );
-  } catch {
-    return false;
+    if (!signatureHeader) return false;
+  
+    const hmac = crypto.createHmac("sha256", secret);
+    hmac.update(rawBody.toString("utf8"));
+    const expected = hmac.digest("hex");
+  
+    try {
+      const signatureBuffer = Buffer.from(signatureHeader.replace(/^sha256=/, "").trim(), "hex");
+      const expectedBuffer = Buffer.from(expected, "hex");
+      return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+    } catch {
+      return false;
+    }
   }
-}
 
 /**
  * Fetch or refresh Strava access token using Admin SDK
@@ -170,9 +169,7 @@ export default async function handler(req, res) {
 
   // GET = validation from Strava when creating webhook subscription
   if (req.method === "GET") {
-    return res.status(200).json({
-      "hub.challenge": req.query["hub.challenge"],
-    });
+    return res.status(200).send(req.query["hub.challenge"]);
   }
 
   // POST = webhook event
