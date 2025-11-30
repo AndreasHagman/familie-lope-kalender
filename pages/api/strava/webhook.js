@@ -225,20 +225,8 @@ async function handleWebhookEvent(event) {
 export default async function handler(req, res) {
   // Strava sender GET request for verifisering ved oppsett
   if (req.method === "GET") {
-    const mode = req.query["hub.mode"];
-    const token = req.query["hub.verify_token"];
     const challenge = req.query["hub.challenge"];
-
-    // Verifiser at dette er en Strava webhook verifisering
-    const verifyToken = process.env.STRAVA_WEBHOOK_VERIFY_TOKEN;
-    
-    if (mode === "subscribe" && token === verifyToken) {
-      console.log("✅ Webhook verifisert");
-      return res.status(200).json({ "hub.challenge": challenge });
-    } else {
-      console.error("❌ Webhook verifisering feilet");
-      return res.status(403).send("Forbidden");
-    }
+    return res.status(200).json({ "hub.challenge": challenge });
   }
 
   // Strava sender POST request for events
