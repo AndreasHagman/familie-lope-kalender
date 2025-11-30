@@ -231,7 +231,7 @@ export default async function handler(req, res) {
 
   // Strava sender POST request for events
   if (req.method === "POST") {
-    const webhookSecret = process.env.STRAVA_WEBHOOK_SECRET;
+    const webhookSecret = process.env.STRAVA_CLIENT_SECRET;
 
     if (!webhookSecret) {
       console.error("❌ STRAVA_WEBHOOK_SECRET ikke satt");
