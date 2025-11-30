@@ -20,12 +20,15 @@ export default function LogKmModal({
   const [keyWord, setKeyWord] = useState("luke"); // fallback
   const [stravaTime, setStravaTime] = useState(null);
 
-  const switchToManual = () => {
-  setManualMode(true);
-  setStravaKm(null);
-};
+  // Reset manualMode når modal åpnes
+  useEffect(() => {
+    if (open) {
+      setManualMode(false);
+      setKmLogged("");
+    }
+  }, [open]);
 
- // 🔥 Hent keyword fra bruker-dokument
+  // 🔥 Hent keyword fra bruker-dokument
   useEffect(() => {
     if (!user) return;
     const fetchKeyword = async () => {
@@ -40,29 +43,29 @@ export default function LogKmModal({
     fetchKeyword();
   }, [user]);
 
-  // 🔹 Hent Strava-data ved åpning
+  // 🔹 Hent Strava-data ved åpning eller når man går tilbake fra manuell modus
   useEffect(() => {
-  async function run() {
-    if (open && stravaAccessToken && !manualMode) {
-      setLoadingStrava(true);
+    async function run() {
+      if (open && stravaAccessToken && !manualMode && user) {
+        setLoadingStrava(true);
 
-      const validToken = await getValidStravaAccessToken(user.uid);
-      const result = await fetchTodaysStravaActivities(validToken, keyWord);
+        const validToken = await getValidStravaAccessToken(user.uid);
+        const result = await fetchTodaysStravaActivities(validToken, keyWord);
 
-      if (result && result.km > 0) {
-        setStravaKm(result.km);
-        setStravaTime(result.time);
-      } else {
-        setStravaKm(null);
-        setStravaTime(null);
+        if (result && result.km > 0) {
+          setStravaKm(result.km);
+          setStravaTime(result.time);
+        } else {
+          setStravaKm(null);
+          setStravaTime(null);
+        }
+
+        setLoadingStrava(false);
       }
-
-      setLoadingStrava(false);
     }
-  }
 
-  run();
-}, [open, stravaAccessToken, manualMode, keyWord]);
+    run();
+  }, [open, stravaAccessToken, manualMode, keyWord, user]);
 
   function getLocalIsoDateTime() {
     const now = new Date();
@@ -132,42 +135,52 @@ export default function LogKmModal({
             <h2 className="text-xl font-bold mb-4 text-center">Logg løpeturen</h2>
 
             {/* Strava feedback */}
-            {stravaAccessToken && (
-            <div className="mb-4 text-center">
+            {stravaAccessToken && !manualMode && (
+              <div className="mb-4 text-center">
                 {loadingStrava ? (
-                <p className="text-gray-500">Henter Strava-data…</p>
+                  <p className="text-gray-500">Henter Strava-data…</p>
                 ) : stravaKm !== null ? (
-                <p className="text-green-700 font-semibold">
+                  <p className="text-green-700 font-semibold">
                     🏃‍♂️ Strava-aktivitet funnet: <span className="font-bold">{stravaKm} km</span>
-                </p>
+                  </p>
                 ) : (
-                <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500">
                     Ingen Strava-aktiviteter funnet for i dag med nøkkelordet "{keyWord}".
-                </p>
+                  </p>
                 )}
 
-                {/* Alltid vis knapp for manuell logging */}
-                {(!manualMode) && (
+                {/* Knapp for å bytte til manuell logging */}
                 <button
-                onClick={() => setManualMode(true)}
-                className="mt-2 text-sm text-blue-600 underline hover:text-blue-800"
+                  onClick={() => setManualMode(true)}
+                  className="mt-2 text-sm text-blue-600 underline hover:text-blue-800"
                 >
-                Logg manuelt i stedet
+                  Logg manuelt
                 </button>
-                )}
-            </div>
+              </div>
             )}
 
             {/* Manuell input */}
             {(manualMode || !stravaAccessToken) && (
-            <input
-                type="number"
-                min="0"
-                value={kmLogged}
-                onChange={(e) => setKmLogged(e.target.value)}
-                placeholder="Antall km"
-                className="border rounded px-3 py-2 w-full text-center mb-4"
-            />
+              <div className="mb-4">
+                {manualMode && stravaAccessToken && (
+                  <div className="mb-2 text-center">
+                    <button
+                      onClick={() => setManualMode(false)}
+                      className="text-sm text-blue-600 underline hover:text-blue-800"
+                    >
+                      ← Bruk Strava-data
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="number"
+                  min="0"
+                  value={kmLogged}
+                  onChange={(e) => setKmLogged(e.target.value)}
+                  placeholder="Antall km"
+                  className="border rounded px-3 py-2 w-full text-center"
+                />
+              </div>
             )}
 
             <div className="flex justify-between">

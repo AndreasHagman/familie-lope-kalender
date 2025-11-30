@@ -1,6 +1,10 @@
 export function getWeatherMotivation(data) { 
+  if (!data || !data.main || !data.weather || !data.weather[0]) {
+    return "🏃 Kom deg ut og nyt dagens løpetur!";
+  }
+
   const temp = data.main.temp;
-  const wind = data.wind.speed;
+  const wind = data.wind?.speed || 0;
   const weatherId = data.weather[0].id; // ex: 800 = klar himmel
 
   const isRain = weatherId >= 500 && weatherId < 600;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getWeatherMotivation } from "../utils/weatherMotivation";
 
 export default function WeatherMotivator() {
@@ -7,49 +7,138 @@ export default function WeatherMotivator() {
 
   // 🌤️ Her lagres selve vær-dataene (temp, vind osv.)
   const [weather, setWeather] = useState(null);
+  
+  // Bruk ref i stedet for variabel for å unngå scope-problemer med Chrome extensions
+  const isMountedRef = useRef(true);
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setMotivation("🌍 Kunne ikke hente posisjon.");
-      setLoading(false);
-      return;
-    }
+    isMountedRef.current = true;
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
+    // Timeout for å skjule komponenten hvis det tar for lang tid
+    timeoutRef.current = setTimeout(() => {
+      try {
+        setLoading(false);
+        setMotivation(null); // Skjul komponenten hvis det tar for lang tid
+      } catch (e) {
+        console.warn("Could not set state in timeout:", e);
+      }
+    }, 15000); // 15 sekunder total timeout
 
-        try {
-          const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
-          const data = await res.json();
-
-          if (data.error) {
-            setMotivation("Kunne ikke hente værdata.");
-          } else {
-            setWeather({
-              temp: data.main.temp,
-              feelsLike: data.main.feels_like,
-              wind: data.wind.speed,
-              icon: data.weather?.[0]?.icon,
-              description: data.weather?.[0]?.description,
-            });
-
-            setMotivation(getWeatherMotivation(data));
+    const fetchWeather = async () => {
+      try {
+        if (!navigator.geolocation) {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
           }
-        } catch (err) {
-          console.error("Weather fetch error:", err);
-          setMotivation("Feil ved henting av værdata.");
+          try {
+            setLoading(false);
+            setMotivation(null); // Skjul komponenten hvis geolocation ikke er tilgjengelig
+          } catch (e) {
+            console.warn("Could not set state:", e);
+          }
+          return;
         }
 
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Geo error:", err);
-        setMotivation(null);
-        setLoading(false);
+        // Lag callback-funksjoner som bruker state-setters direkte med try-catch
+        // Dette sikrer at de fungerer selv når Chrome-extensionen kaller dem
+        // Vi prøver ikke å rydde timeout her fordi Chrome-extensionen ikke har tilgang til den
+        const successCallback = async (pos) => {
+          try {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+
+            const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+            
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            
+            const data = await res.json();
+
+            if (data.error) {
+              try {
+                setLoading(false);
+                setMotivation(null); // Skjul komponenten ved feil
+              } catch (e) {
+                console.warn("Could not set motivation:", e);
+              }
+            } else if (data.main && data.weather && data.weather[0]) {
+              try {
+                setWeather({
+                  temp: data.main.temp,
+                  feelsLike: data.main.feels_like,
+                  wind: data.wind?.speed || 0,
+                  icon: data.weather[0]?.icon,
+                  description: data.weather[0]?.description,
+                });
+                setMotivation(getWeatherMotivation(data));
+                setLoading(false);
+              } catch (e) {
+                console.warn("Could not set weather/motivation:", e);
+              }
+            } else {
+              try {
+                setLoading(false);
+                setMotivation(null); // Skjul komponenten hvis data mangler
+              } catch (e) {
+                console.warn("Could not set motivation:", e);
+              }
+            }
+          } catch (err) {
+            console.error("Weather fetch error:", err);
+            try {
+              setLoading(false);
+              setMotivation(null); // Skjul komponenten ved feil
+            } catch (e) {
+              console.warn("Could not set motivation:", e);
+            }
+          }
+        };
+
+        const errorCallback = (err) => {
+          console.error("Geo error:", err);
+          try {
+            setLoading(false);
+            setMotivation(null); // Skjul komponenten ved geolocation-feil
+          } catch (e) {
+            console.warn("Could not set state in error callback:", e);
+          }
+        };
+
+        navigator.geolocation.getCurrentPosition(
+          successCallback,
+          errorCallback,
+          {
+            timeout: 10000, // 10 sekunder timeout for geolocation
+            enableHighAccuracy: false,
+          }
+        );
+      } catch (err) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        console.error("Unexpected error in WeatherMotivator:", err);
+        try {
+          setLoading(false);
+          setMotivation(null);
+        } catch (e) {
+          console.warn("Could not set state:", e);
+        }
       }
-    );
+    };
+
+    fetchWeather();
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      isMountedRef.current = false;
+    };
   }, []);
 
   if (loading) return <p className="text-gray-500">Henter værdata…</p>;
