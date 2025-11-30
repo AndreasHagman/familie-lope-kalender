@@ -11,15 +11,21 @@ export default function WeatherMotivator() {
   // Bruk ref i stedet for variabel for å unngå scope-problemer med Chrome extensions
   const isMountedRef = useRef(true);
   const timeoutRef = useRef(null);
+  const dataFetchedRef = useRef(false); // Track om data er hentet
 
   useEffect(() => {
     isMountedRef.current = true;
+    dataFetchedRef.current = false; // Reset når komponenten monteres
 
     // Timeout for å skjule komponenten hvis det tar for lang tid
+    // Men bare hvis data ikke er hentet ennå
     timeoutRef.current = setTimeout(() => {
       try {
-        setLoading(false);
-        setMotivation(null); // Skjul komponenten hvis det tar for lang tid
+        // Bare skjul hvis data ikke er hentet
+        if (!dataFetchedRef.current) {
+          setLoading(false);
+          setMotivation(null); // Skjul komponenten hvis det tar for lang tid
+        }
       } catch (e) {
         console.warn("Could not set state in timeout:", e);
       }
@@ -43,7 +49,6 @@ export default function WeatherMotivator() {
 
         // Lag callback-funksjoner som bruker state-setters direkte med try-catch
         // Dette sikrer at de fungerer selv når Chrome-extensionen kaller dem
-        // Vi prøver ikke å rydde timeout her fordi Chrome-extensionen ikke har tilgang til den
         const successCallback = async (pos) => {
           try {
             const lat = pos.coords.latitude;
@@ -66,6 +71,20 @@ export default function WeatherMotivator() {
               }
             } else if (data.main && data.weather && data.weather[0]) {
               try {
+                // Marker at data er hentet FØR vi setter state
+                // Dette sikrer at timeout ikke skjuler komponenten
+                dataFetchedRef.current = true;
+                
+                // Rydd opp timeout siden data er hentet
+                // Bruk en funksjon som fanger timeoutRef i closure
+                const clearTimeoutSafe = () => {
+                  if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                    timeoutRef.current = null;
+                  }
+                };
+                clearTimeoutSafe();
+                
                 setWeather({
                   temp: data.main.temp,
                   feelsLike: data.main.feels_like,
@@ -75,6 +94,7 @@ export default function WeatherMotivator() {
                 });
                 setMotivation(getWeatherMotivation(data));
                 setLoading(false);
+                // Data er hentet, så timeout skal ikke skjule komponenten lenger
               } catch (e) {
                 console.warn("Could not set weather/motivation:", e);
               }
@@ -98,6 +118,11 @@ export default function WeatherMotivator() {
         };
 
         const errorCallback = (err) => {
+          // Rydd opp timeout ved feil
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
           console.error("Geo error:", err);
           try {
             setLoading(false);
