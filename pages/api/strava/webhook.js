@@ -186,6 +186,7 @@ export default async function handler(req, res) {
     try {
       const rawBody = await getRawBody(req);
       console.log("🔹 rawBody length:", rawBody.length);
+      console.log("🔹 All headers:", req.headers);
 
     // Try both possible header names
     const signature =
