@@ -1,11 +1,40 @@
 import { adminDb } from "../../../firebase/adminConfig";
 import crypto from "crypto";
+import getRawBody from "raw-body";
 
-// Server-side versjon av getValidStravaAccessToken (bruker Admin SDK)
+// Next.js må bruke raw body for korrekt signaturverifikasjon
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+/**
+ * Verify Strava webhook signature using client_secret
+ */
+function verifyWebhookSignature(rawBody, secret, signatureHeader) {
+  if (!signatureHeader) return false;
+
+  const hmac = crypto.createHmac("sha256", secret);
+  hmac.update(rawBody);
+  const expected = `sha256=${hmac.digest("hex")}`;
+
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signatureHeader),
+      Buffer.from(expected)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetch or refresh Strava access token using Admin SDK
+ */
 async function getValidStravaAccessTokenServer(userId) {
   const userRef = adminDb.collection("users").doc(userId);
   const snap = await userRef.get();
-
   if (!snap.exists) return null;
 
   const data = snap.data().strava;
@@ -14,108 +43,57 @@ async function getValidStravaAccessTokenServer(userId) {
   const { access_token, refresh_token, expires_at } = data;
   const now = Math.floor(Date.now() / 1000);
 
-  // valid token
-  if (now < expires_at - 300) {
-    return access_token;
-  }
+  // Still valid?
+  if (now < expires_at - 300) return access_token;
 
-  // refresh on backend
-  try {
-    const res = await fetch("https://www.strava.com/api/v3/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID,
-        client_secret: process.env.STRAVA_CLIENT_SECRET,
-        grant_type: "refresh_token",
-        refresh_token,
-      }),
-    });
+  // Refresh token
+  const res = await fetch("https://www.strava.com/api/v3/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID,
+      client_secret: process.env.STRAVA_CLIENT_SECRET,
+      grant_type: "refresh_token",
+      refresh_token,
+    }),
+  });
 
-    if (!res.ok) {
-      console.error("Failed to refresh Strava token");
-      return null;
-    }
+  const json = await res.json();
+  if (!json.access_token) return null;
 
-    const json = await res.json();
-    if (!json.access_token) return null;
+  await userRef.update({
+    strava: {
+      ...data,
+      access_token: json.access_token,
+      refresh_token: json.refresh_token,
+      expires_at: json.expires_at,
+    },
+  });
 
-    // Verify document still exists before updating
-    const verifySnap = await userRef.get();
-    if (!verifySnap.exists) {
-      console.error("User document no longer exists");
-      return null;
-    }
-
-    // update Firebase (Admin SDK bypasser security rules)
-    await userRef.update({
-      strava: {
-        ...data,
-        access_token: json.access_token,
-        refresh_token: json.refresh_token,
-        expires_at: json.expires_at,
-      },
-    });
-
-    return json.access_token;
-  } catch (err) {
-    console.error("Error refreshing Strava token:", err);
-    return null;
-  }
+  return json.access_token;
 }
 
 /**
- * Strava Webhook Handler
- * 
- * Strava sender webhook events når aktiviteter opprettes/oppdateres.
- * Vi verifiserer signaturen og oppdaterer automatisk brukerens log.
+ * Handle actual Strava webhook events
  */
-
-// Verifiser webhook-signatur fra Strava
-function verifyWebhookSignature(req, secret) {
-  const signature = req.headers["x-hub-signature-256"];
-  if (!signature) return false;
-
-  const hmac = crypto.createHmac("sha256", secret);
-  const payload = JSON.stringify(req.body);
-  hmac.update(payload);
-  const calculatedSignature = `sha256=${hmac.digest("hex")}`;
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(calculatedSignature)
-  );
-}
-
-// Håndter webhook event
 async function handleWebhookEvent(event) {
-  console.log("📥 Strava webhook event:", event.object_type, event.aspect_type);
+  console.log("📥 Webhook event:", event.object_type, event.aspect_type);
 
-  // Vi er kun interessert i "activity" events
-  if (event.object_type !== "activity") {
-    console.log("Ignorerer event - ikke en aktivitet");
-    return;
-  }
-
-  // Vi er kun interessert i "create" og "update" events
-  if (event.aspect_type !== "create" && event.aspect_type !== "update") {
-    console.log("Ignorerer event - ikke create/update");
-    return;
-  }
+  if (event.object_type !== "activity") return;
+  if (!["create", "update"].includes(event.aspect_type)) return;
 
   const activityId = event.object_id;
   const athleteId = event.owner_id;
 
-  console.log(`🔍 Søker etter bruker med Strava athlete ID: ${athleteId}`);
+  console.log("🔎 Searching for user with athlete ID:", athleteId);
 
-  // Finn bruker basert på Strava athlete ID (bruker Admin SDK)
   const usersRef = adminDb.collection("users");
   const querySnapshot = await usersRef
     .where("strava.athlete.id", "==", athleteId)
     .get();
 
   if (querySnapshot.empty) {
-    console.log(`❌ Ingen bruker funnet med athlete ID: ${athleteId}`);
+    console.log("❌ No user found for athlete:", athleteId);
     return;
   }
 
@@ -123,137 +101,100 @@ async function handleWebhookEvent(event) {
   const userId = userDoc.id;
   const userData = userDoc.data();
 
-  console.log(`✅ Funnet bruker: ${userId}`);
+  console.log("✅ Matched user:", userId);
 
-  // Hent gyldig access token
   const accessToken = await getValidStravaAccessTokenServer(userId);
-  if (!accessToken) {
-    console.error(`❌ Kunne ikke hente gyldig access token for bruker: ${userId}`);
+  if (!accessToken) return;
+
+  const activityRes = await fetch(
+    `https://www.strava.com/api/v3/activities/${activityId}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!activityRes.ok) {
+    console.log("❌ Failed fetching activity:", activityId);
     return;
   }
 
-  // Hent aktivitetsdetaljer fra Strava
-  try {
-    const activityRes = await fetch(
-      `https://www.strava.com/api/v3/activities/${activityId}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
+  const activity = await activityRes.json();
+  const km = Number((activity.distance / 1000).toFixed(2));
 
-    if (!activityRes.ok) {
-      console.error(`❌ Kunne ikke hente aktivitet ${activityId}: ${activityRes.status}`);
-      return;
-    }
+  // Keyword filter
+  const kw = (userData.stravaKeyWord || "").toLowerCase();
+  const name = (activity.name || "").toLowerCase();
+  const desc = (activity.description || "").toLowerCase();
 
-    const activity = await activityRes.json();
-    console.log(`📊 Aktivitet hentet: ${activity.name} - ${activity.distance / 1000} km`);
-
-    // Sjekk nøkkelord
-    const keyWord = userData.stravaKeyWord || "";
-    const activityName = activity.name?.toLowerCase() || "";
-    const activityDescription = activity.description?.toLowerCase() || "";
-    const keyWordLower = keyWord.toLowerCase();
-
-    const matchesKeyword =
-      !keyWord || // Hvis ingen nøkkelord er satt, aksepter alle
-      activityName.includes(keyWordLower) ||
-      activityDescription.includes(keyWordLower);
-
-    if (!matchesKeyword) {
-      console.log(`⏭️ Aktivitet matcher ikke nøkkelord "${keyWord}"`);
-      return;
-    }
-
-    // Sjekk om aktiviteten er i dag (lokal tid)
-    const activityDate = new Date(activity.start_date_local);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const activityDateOnly = new Date(activityDate);
-    activityDateOnly.setHours(0, 0, 0, 0);
-
-    const isToday = activityDateOnly.getTime() === today.getTime();
-
-    if (!isToday) {
-      console.log(`📅 Aktivitet er ikke fra i dag: ${activityDate.toISOString()}`);
-      return;
-    }
-
-    // Beregn km
-    const km = Number((activity.distance / 1000).toFixed(2));
-    const time = activity.start_date_local;
-
-    console.log(`✅ Aktivitet matcher! ${km} km på ${time}`);
-
-    // Oppdater brukerens log (bruker Admin SDK som bypasser security rules)
-    const userRef = adminDb.collection("users").doc(userId);
-    const userSnap = await userRef.get();
-    const currentLog = userSnap.data()?.log || {};
-
-    // Bruk dagens dato som nøkkel (YYYY-MM-DD)
-    const todayKey = activityDate.toISOString().slice(0, 10);
-
-    // Oppdater kun hvis det ikke allerede finnes en logg for i dag
-    // eller hvis den nye aktiviteten er nyere
-    const existingLog = currentLog[todayKey];
-    if (existingLog) {
-      const existingTime = new Date(existingLog.time);
-      const newTime = new Date(time);
-      if (newTime <= existingTime) {
-        console.log(`⏭️ Eksisterende logg er nyere eller lik, hopper over`);
-        return;
-      }
-    }
-
-    // Oppdater loggen
-    const updatedLog = {
-      ...currentLog,
-      [todayKey]: {
-        km: km,
-        time: time,
-      },
-    };
-
-    await userRef.update({ log: updatedLog });
-    console.log(`🎉 Automatisk oppdatert logg for ${userId}: ${km} km`);
-
-  } catch (error) {
-    console.error("❌ Feil ved håndtering av webhook event:", error);
+  if (kw && !name.includes(kw) && !desc.includes(kw)) {
+    console.log("⏭️ Keyword mismatch");
+    return;
   }
+
+  // Date filter (only today)
+  const startDate = new Date(activity.start_date_local);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startOnly = new Date(startDate);
+  startOnly.setHours(0, 0, 0, 0);
+
+  if (startOnly.getTime() !== today.getTime()) {
+    console.log("⏭️ Activity is not from today");
+    return;
+  }
+
+  const time = activity.start_date_local;
+  const userRef = adminDb.collection("users").doc(userId);
+  const snap = await userRef.get();
+
+  const currentLog = snap.data()?.log || {};
+  const todayKey = startDate.toISOString().slice(0, 10);
+
+  const existing = currentLog[todayKey];
+
+  if (existing && new Date(existing.time) >= new Date(time)) {
+    console.log("⏭️ Existing entry is newer or equal");
+    return;
+  }
+
+  const updated = {
+    ...currentLog,
+    [todayKey]: { km, time },
+  };
+
+  await userRef.update({ log: updated });
+
+  console.log(`🎉 Updated log for ${userId}: ${km} km`);
 }
 
 export default async function handler(req, res) {
-  // Strava sender GET request for verifisering ved oppsett
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+
+  // GET = validation from Strava when creating webhook subscription
   if (req.method === "GET") {
-    const challenge = req.query["hub.challenge"];
-    return res.status(200).json({ "hub.challenge": challenge });
+    return res.status(200).json({
+      "hub.challenge": req.query["hub.challenge"],
+    });
   }
 
-  // Strava sender POST request for events
+  // POST = webhook event
   if (req.method === "POST") {
-    const webhookSecret = process.env.STRAVA_CLIENT_SECRET;
+    const rawBody = await getRawBody(req);
+    const signature = req.headers["x-hub-signature-256"];
 
-    if (!webhookSecret) {
-      console.error("❌ STRAVA_WEBHOOK_SECRET ikke satt");
-      return res.status(500).send("Webhook secret not configured");
-    }
-
-    // Verifiser signatur
-    if (!verifyWebhookSignature(req, webhookSecret)) {
-      console.error("❌ Webhook signatur verifisering feilet");
+    // Verify signature
+    if (!verifyWebhookSignature(rawBody, clientSecret, signature)) {
+      console.error("❌ Invalid webhook signature");
       return res.status(403).send("Invalid signature");
     }
 
-    // Håndter eventet (async, men vi svarer raskt til Strava)
-    const event = req.body;
-    handleWebhookEvent(event).catch((error) => {
-      console.error("❌ Feil ved håndtering av webhook event:", error);
-    });
+    const event = JSON.parse(rawBody.toString("utf8"));
 
-    // Svar raskt til Strava (innenfor 2 sekunder)
+    // Handle event async
+    handleWebhookEvent(event).catch((err) =>
+      console.error("❌ Webhook event error:", err)
+    );
+
     return res.status(200).send("OK");
   }
 
-  return res.status(405).send("Method not allowed");
+  return res.status(405).send("Method Not Allowed");
 }
-
